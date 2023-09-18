@@ -8,7 +8,7 @@
 % collected onboard a research aircraft. Images are georeferenced using a 
 % Novatel SPAN LN200 Inertial Motion Unit (IMU) coupled to a ProPak6 GPS
 % reciever which provided aircraft trajectory information 
-% (altitude and postion).
+% (attitude and postion).
 % 
 % This script imports the following processed data: 
 % 
@@ -19,8 +19,9 @@
 %     offsets between reference frames the GPS-IMU and the video camera)
 %     are accounted for. 
 %
-% (2) Aircraft trajectory: Consist of the EO text files that provide the 
-%     position and atitude of the aircraft over time. This time series is 
+% (2) Aircraft trajectory and attitude: Consist of the EO text files that
+%     provide the position and attitude of the aircraft over time from the 
+%     coupled GPS-IMU onboard the research aircraft. This time series is
 %     interpolated to match the time steps of the video camera images.  
 % 
 % For specifics on video and trajectory data processing, see Nick Statom's
@@ -30,7 +31,7 @@
 % 
 % The lambda of c calculation steps include the following: 
 % 
-% (1) Load 
+% (1) Load aircraft 
 % 
 % Below are a few tips for running the code. 
 % 
@@ -38,21 +39,30 @@
 %     whichever airseaserver the data is located on. Either way, your local
 %     computer needs to be connected to the ucsd vpn; use cisco AnyConnect
 %     to do this. If running the code locally, connect to remote server 
-%     through your file system explorer to gain remote access to the data. 
+%     through your file system explorer to gain remote access to the data 
+%     (i.e., mount to the remote server on your local computer). 
 %     If running the code on the airseaserver, use remote microsoft desktop
 %     to connect.     
 % 
 % (2) For the code to run in its entirety, it will take hours to days 
 %     possibly (based on the size of the video data being processed and 
 %     how the data is being processed). To avoid running into a small 
-%     mistake which will force you to run the code all over again, excute
+%     mistake which will force you to run the code all over again, execute
 %     this program section by section and verify the processing worked
-%     correctly by looking at the supplemental figures produced in each
-%     section. 
+%     correctly by looking at the supplemental figures. 
 % 
 % (3) This code has paths to directories and files written using the
 %     windows forward slash convention. This may impact mac users using
 %     this code. 
+% 
+% Some additional notes: 
+% 
+% (1) Vignetting is definited in photography as the reduction of an 
+%     image's brightness or saturation toward the periphery compared to the
+%     image center. For the video camera, the sun glint off the ocean 
+%     surface causes natural vignetting where the image is brightest in
+%     the center of the sun glit and saturated elsewhere. This makes it
+%     challenging to identify wave breaking in the images.
 % 
 %-------------------------------------------------------------------------%
 
@@ -61,33 +71,33 @@ clc, clearvars, close all
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %------- This is the only section of code you will need to change --------%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% Specify your operating system and airseaserver location
-os = 'MacOS';                                                              % Alternatives: 'Windows'
-server = 'airseaserver28';
-
-% Set the experiment and flight date 
-exp = 'TFO_2021'; 
-date = '20210519';
  
+% Set path to raw (non-georeferenced) video images for a given flight
+dirRaw = 'X:\\TFO_2021\Processed\VIDEO\16bit_TIF_Frames\20210519\';
+
 % Set path to georeferenced video images for a given flight 
-if strcmp(os,'MacOS')
-  dirout = ['/Volumes/' server '/' exp '/Processed/Video/Trimble/' date];
-else strcmp(os,'Windows')
-  dirout = ['D:\' exp '\Processed\VIDEO\Trimble\' date '\'];
-end 
+dirout = 'X:\\TFO_2021\Processed\VIDEO\Trimble\20210519\';
 
 % Set path to save verification figures
-dirV=[dirout 'Quality_Control\'];
+dirV = 'D:\DEPLOYMENTS\TFO_2021\figs\video\Quality_Control\';
+
+% Set flight stability criteria parameters
+maxPer=[25 25];                                                             % 
+sigRoll=3;                                                                  % Maximum allowed roll standard deviations for a stable segment.    
+sigPitch=3;                                                                 % Maximum allowed pitch standard deviations for a stable segment.
+sigHeading=6;                                                               % Maximum allowed heading standard deviations for a stable segment.
+
+% Specify whether verification figures will be plotted
+ploton = true; 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Make a directory for verification figures if one does not exist
 if ~exist(dirV, 'dir'), mkdir(dirV); end
 
-%% Load EO data, determine indices of each track in the EO file, and check if the track is steady
+%% Load EO data and determine time indices of each track in the EO file
 
-% Rename EO directory as Trimble_EO 
+% Rename EO directory in dirout path as Trimble_EO 
 if isfolder([dirout 'EO'])
     movefile([dirout 'EO'],[dirout 'Trimble_EO']);
 end
@@ -95,48 +105,45 @@ end
 % Obtain filenames of all EO files 
 D=dir([dirout 'Trimble_EO\' '*EO.txt']);
 
-EOpath=[dirout '\Trimble_EO\' D(1).name];
-EOdir=[dirout '\Trimble_EO\'];
-Counter=HeaderPosition(EOpath,'(sec)');% Note, the string used corresponds to row above the data (las row of header).
-%Load gps and imu into A.data
+% Set path to EO file and its directory  
+EOpath=[dirout 'Trimble_EO\' D(1).name];
+EOdir=[dirout 'Trimble_EO\'];
+
+% Obtain number of lines in the EO text file header 
+Counter=HeaderPosition(EOpath,'(sec)');
+
+% Load trajectory and attitude data 
 A = importdata(EOpath,' ',Counter);
+
 % Get the text component of data (timestamp into column 1, track number and image number into column 2)
 An=cropText(A);
 
-% Determine indices of individual flight tracks in the A.data variable.
+% Determine the start and end time indices for each flight tracks.
 tracks = DefineTracks(An);
 
-% Determine if the heading in track is steady or not. If it is steady,
-% Lambda distributions and whitecap coverage will be determined. 
+%% Determine aircraft stability for each flight track 
+% Note: If flight track is NOT steady, Lambda of c distributions and 
+% whitecap coverage will be determined.  
 
-% The function also determines (based on the relative change of angles)
-% which portion of the beginning/end need to be cropped. 
-
-% Step size in search (maxPer) and maximum allowed standard deviations in
-% the stable segment.
-maxPer=[25 25];
-sigRoll=3;
-sigPitch=3;
-sigHeading=6;
+% Identify track stability based on input criteria
 trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An);
-
-
-% Load buoy positions
-% load('D:\MASS\Processed\L_Computations\L_Computations\Test\TFOEx21_DEP01_BuoyGPS.mat')
-
 
 % Plot out headings in flight tracks, with all other data (used portion of 
 % the track, whether is it labeled as steady or not).
-dirV=[dirout 'Quality_Control\Flight_Trajectories_And_Stability\'];
-if ~exist(dirV, 'dir'), mkdir(dirV); end
+if ploton == true
 
-%plotOutTracks_V2(A,tracks,trackTag,dirV,An,dirout);
+    % Create a subdirectory for flight trajectory and stability plots
+    dirV=[dirV 'Flight_Trajectories_And_Stability\'];
+    if ~exist(dirV, 'dir'), mkdir(dirV); end
+    
+    % Generate plots
+    plotOutTracks(A,tracks,trackTag,dirV,An,dirout);
+end
 
 
+%% Remove vignetting and crop out high glint 
 
-%% Remove vignetting and crop out high glint
-% Directory of the raw (nongeoreferenced) images
-dirRaw='D:\TFO_2021\Processed\VIDEO\16bit_TIF_Frames\20210519\';
+% Obtain the filenames of the non-georeferenced video images 
 D_Im=dir([dirRaw '*.tif']);
 
 % Define tracks in images
@@ -467,6 +474,11 @@ plotAll_TFO(dirV2,trackTag,StartTime,tracks,An,Hs_all,freq_all,ustar);
 % breaking, spectrogram of Lambda distribution).
 
 %plotDists();
+
+%% Development Code
+
+% Load buoy positions
+% load('D:\MASS\Processed\L_Computations\L_Computations\Test\TFOEx21_DEP01_BuoyGPS.mat')
 
 
 

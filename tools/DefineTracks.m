@@ -3,34 +3,51 @@ function tracks = DefineTracks(An)
     %%%%
     % tracks = DefineTracks(An)
     %
-    % Function for cutting out parts of the header that were not removed 
-    % when importing data (look for '(sec)' in the string in the first 
-    % column of A.textdata). The data field in the A structure is fine 
-    % (A.data contains the position and attitude data). Only the textdata 
-    % is cropped (A.textdata contains the GPSTime station). 
+    % Function for determining the start and end time indices of tracks 
+    % (i.e., flight track), and relabel flight tracks starting at 1. 
+    % Here, we assumes that the files are defined in form of: 
+    %               MASS_VIDEO_TrackNumber_ImageNumber .
     %
     %   Parameters
     %   ----------
-    %   A : Uncropped GPSTime station cell array.
+    %   An : Cropped GPSTime station cell array containing the time (UTC),
+    %        track number, and image number. 
     % 
     %   Returns
     %   -------
-    %   A : Cropped GPSTime station cell array.            
+    %   tracks : Structure containing the start and end time indicies of
+    %   each flight track. 
     %
     %%%%
 
-% Determine indices of tracks, and organize them. Assume that the files
-% are defined in form of : ...._TrackNumber_ImageNumber .
+    % Set indices array with a length equal to the number of time steps in
+    % the time series. 
+    Indices=zeros(length(An(:,1)),1);
 
-Indices=zeros(length(An(:,1)),1);
-for i=1:length(An(:,1))
-    k=find('_'==An{i,2},2,'last');
-    Indices(i)=str2num(An{i,2}(k(1)+1:k(2)-1));
-end
-Indices=Indices+1-min(Indices);
-maxI=max(Indices);
-for i=1:maxI
-    startI=find(i==Indices,1,'first');
-    endI=find(i==Indices,1,'last');
-    tracks(i).Indices=[startI endI];
-end
+    % Loop through time 
+    for i=1:length(An(:,1))
+
+        % Obtain the indices of the underscores infront of the track 
+        % number and image number 
+        k=find('_'==An{i,2},2,'last');
+
+        % Obtain the track number for the ith time step 
+        Indices(i)=str2num(An{i,2}(k(1)+1:k(2)-1));
+    end
+
+    % Make the track numbers increment starting from 1
+    Indices=Indices+1-min(Indices);
+    
+    % Find the highest track number 
+    maxI=max(Indices);
+    
+    % Loop through track numbers
+    for i=1:maxI
+
+        % Obtain the start and end time indicies of the ith flight line 
+        startI=find(i==Indices,1,'first');
+        endI=find(i==Indices,1,'last');
+
+        % Save start and end time indicies in tracks structure
+        tracks(i).Indices=[startI endI];
+    end

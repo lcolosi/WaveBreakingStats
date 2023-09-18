@@ -1,0 +1,30 @@
+function An=cropText(A)
+
+    %%%%
+    % An = cropText(A)
+    %
+    % Function for cutting out parts of the header that were not removed 
+    % when importing data (look for '(sec)' in the string in the first 
+    % column of A.textdata). The data field in the A structure is fine 
+    % (A.data contains the position and attitude data). Jus the textdata (which grabs )
+    %
+    %   Parameters
+    %   ----------
+    %   A : Uncropped aircraft trajectory data structure.
+    % 
+    %   Returns
+    %   -------
+    %   A : Cropped aircraft trajectory data structure.            
+    %
+    %%%%
+
+% Set counter
+Counter=2;
+
+% Obtain first line in the cell array
+tline=A.textdata(1,1);
+while ~contains(tline,'(sec)')
+    tline=A.textdata(Counter,1);
+    Counter=Counter+1;
+end
+An=A.textdata(Counter:end,:);

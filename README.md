@@ -1,5 +1,6 @@
 # Wave Breaking Statistics Code Repository
 **Authors**: Teodor Vrecica, Luc Lenain, Nick Statom, Peter Sutherland, and Luke Colosi. 
+
 **Repository Curator**: Luke Colosi (lcolosi@ucsd.edu) 
 
 # Overview

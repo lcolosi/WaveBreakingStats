@@ -82,7 +82,7 @@ dirout = 'X:\\TFO_2021\Processed\VIDEO\Trimble\20210519\';
 dirV = 'D:\DEPLOYMENTS\TFO_2021\figs\video\Quality_Control\';
 
 % Set flight stability criteria parameters
-maxPer=[25 25];                                                             % 
+maxPer=[25 25];                                                             % Maximum percent of flight track to be removed at the begin and end of the track. For example, maxPer = [25,25] means that at a minimium, 50 percent(from 25% - 75%) of the flight track will be used in analysis with the 0-25% and 75%-100% removed from the flight track.  
 sigRoll=3;                                                                  % Maximum allowed roll standard deviations for a stable segment.    
 sigPitch=3;                                                                 % Maximum allowed pitch standard deviations for a stable segment.
 sigHeading=6;                                                               % Maximum allowed heading standard deviations for a stable segment.
@@ -133,13 +133,12 @@ trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An);
 if ploton == true
 
     % Create a subdirectory for flight trajectory and stability plots
-    dirV=[dirV 'Flight_Trajectories_And_Stability\'];
-    if ~exist(dirV, 'dir'), mkdir(dirV); end
+    dirstab=[dirV 'Flight_Trajectories_And_Stability\'];
+    if ~exist(dirstab, 'dir'), mkdir(dirstab); end
     
     % Generate plots
-    plotOutTracks(A,tracks,trackTag,dirV,An,dirout);
+    plotOutTracks(A,tracks,trackTag,dirstab,An,dirout);
 end
-
 
 %% Remove vignetting and crop out high glint 
 

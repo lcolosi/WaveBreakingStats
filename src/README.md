@@ -10,20 +10,20 @@ reciever which provided aircraft trajectory information
 
 This script imports the following processed data: 
 
-(1) Video camera images georeferenced with Trimble software: Consist of
-    geotiff files where each pixel in the image is assigned a lat/lon or
-    UTM coordinate based on the position/atitude of the aircraft and the
-    distortion ofthe lens. Additionally, boresight adjustments (i.e.,
-    offsets between reference frames the GPS-IMU and the video camera)
-    are accounted for. 
+1. Video camera images georeferenced with Trimble software: Consist of
+   geotiff files where each pixel in the image is assigned a lat/lon or
+   UTM coordinate based on the position/atitude of the aircraft and the
+   distortion ofthe lens. Additionally, boresight adjustments (i.e.,
+   offsets between reference frames the GPS-IMU and the video camera)
+   are accounted for. 
 
-(2) Aircraft trajectory and attitude: Consist of the EO text files that
-    provide the position and attitude of the aircraft over time from the 
-    coupled GPS-IMU onboard the research aircraft. This time series is
-    interpolated to match the time steps of the video camera images.  
+2. Aircraft trajectory and attitude: Consist of the EO text files that
+   provide the position and attitude of the aircraft over time from the 
+   coupled GPS-IMU onboard the research aircraft. This time series is
+   interpolated to match the time steps of the video camera images.  
 
 For specifics on video and trajectory data processing, see Nick Statom's
-documentation (here)[https://docs.google.com/document/d/1qbaBH98IW1tJrMfxC6TKL-jQIcMPm7KK_KRrxk3rBb0/edit]
+documentation [here](https://docs.google.com/document/d/1qbaBH98IW1tJrMfxC6TKL-jQIcMPm7KK_KRrxk3rBb0/edit)
 
 The lambda of c calculation steps include the following: 
 

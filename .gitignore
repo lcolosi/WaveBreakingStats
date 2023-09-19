@@ -1,0 +1,17 @@
+#----- Git Ignore File -----#
+
+# Data directory 
+
+
+# Figs directory 
+
+
+# Docs directory
+
+
+# Src directory
+src/*.asv
+
+# Tools directory
+tools/*.asv
+

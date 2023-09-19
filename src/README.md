@@ -15,7 +15,7 @@ This script imports the following processed data:
 2. Aircraft trajectory and attitude: Consists of the EO text files that provide the position and attitude of the aircraft over time from the coupled GPS-IMU onboard the research aircraft. This time series is interpolated to match the time steps of the video camera images.  
 
 For specifics on video and trajectory data processing, see Nick Statom's
-documentation [here](https://docs.google.com/document/d/1qbaBH98IW1tJrMfxC6TKL-jQIcMPm7KK_KRrxk3rBb0/edit)
+documentation [here](https://docs.google.com/document/d/1qbaBH98IW1tJrMfxC6TKL-jQIcMPm7KK_KRrxk3rBb0/edit).
 
 The lambda of c calculation steps include the following: 
 
@@ -31,4 +31,4 @@ Below are a few tips for running the code.
 
 Some additional notes: 
 
-(1) Vignetting is defined in photography as the reduction of an image's brightness or saturation toward the periphery compared to the image center. For the video camera, the sun glint off the ocean surface causes natural vignetting where the image is brightest in the center of the sun glint and saturated elsewhere. This makes it challenging to identify wave breaking in the images.
+1. Vignetting is defined in photography as the reduction of an image's brightness or saturation toward the periphery compared to the image center. For the video camera, the sun glint off the ocean surface causes natural vignetting where the image is brightest in the center of the sun glint and saturated elsewhere. This makes it challenging to identify wave breaking in the images.

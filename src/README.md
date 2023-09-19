@@ -33,3 +33,12 @@ Below are a few tips for running the code.
 Some additional notes: 
 
 1. Vignetting is defined in photography as the reduction of an image's brightness or saturation toward the periphery compared to the image center. For the video camera, the sun glint off the ocean surface causes natural vignetting where the image is brightest in the center of the sun glint and saturated elsewhere. This makes it challenging to identify wave breaking in the images.
+
+----
+## Development Questions Log 
+Here, I will document questions/comments concerning data processing, potential mistakes, and possible improvements I can make to the code. They will be organized by code. 
+
+### Main.m 
+
+### TrackSteady.m 
+1. **Comment**: Instead of using the standard deviation of the roll, pitch, and heading to figure out when the plane is turning off the flight line, the gradient of the roll pitch and heading (computed over 5-10 second intervals) may be used.  

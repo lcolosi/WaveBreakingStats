@@ -8,7 +8,7 @@ Here, I will document the changes made to the wave breaking statistic scripts. A
 3. 
 
 ### TrackSteady.m 
-1. Removed previous approach for averaging heading (adding 360 to values close to wrapping point). Now, the mean angle is computed for the average cosine and sine values of the heading angle. The standard deviation of heading is computed using the Yamartino method. The mean and standard deviation of roll and pitch are computed using simply the mean and standard deviation function built-into matlab (the roll and pitch don't approach the wrapping point).
+1. Removed previous approach for averaging heading (adding 360 to values close to wrapping point). Now, the mean angle is computed from the average cosine and sine values of the heading angle. The standard deviation of heading is computed using the Yamartino method. The mean and standard deviation of roll and pitch are computed using simply the mean and standard deviation function built-into matlab (the roll and pitch don't approach the wrapping point).
 
 2. Changed code for detecting abrupt changes in angles. Recall that abrupt changes wereoriginaly deteched using two approaches in the code: 
 

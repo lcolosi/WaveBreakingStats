@@ -1,4 +1,5 @@
 # Main.m Script
+*Authors: Teodor Vrecica, Luc Lenain, and Luke Colosi*
 
 Script for estimating lambda of c and other wave-breaking statistics 
 from processed video data using the IO Industries FLARE 12M125-CL

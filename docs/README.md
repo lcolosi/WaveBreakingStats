@@ -12,9 +12,9 @@ Here, I will document the changes made to the wave breaking statistic scripts. A
 
 2. Changed code for detecting abrupt changes in angles. Recall that abrupt changes wereoriginaly deteched using two approaches in the code: 
 
-[] The jth roll/pitch/heading observation deviates from the its mean by more than t times its standard deviation plus 1 (for roll and pitch) or 2 (for heading).
+-[] The jth roll/pitch/heading observation deviates from the its mean by more than t times its standard deviation plus 1 (for roll and pitch) or 2 (for heading).
 
-[] The jth roll/pitch/heading observation 7 seconds away (when the jth observation is within 7 seconds, use the time index at the beginning/end of the track) deviates from its mean by more than t times its standard deviation plus 1 (for roll and pitch) or(for heading).
+-[] The jth roll/pitch/heading observation 7 seconds away (when the jth observation is within 7 seconds, use the time index at the beginning/end of the track) deviates from its mean by more than t times its standard deviation plus 1 (for roll and pitch) or(for heading).
 
 There seemed to be two mistakes here: 
     1. There is no reason I can tell for adding 1 or 2 to `t*\sigma`

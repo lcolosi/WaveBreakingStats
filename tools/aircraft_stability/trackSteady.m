@@ -33,22 +33,7 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An)
     %              based on the inputted roll, pitch, and heading criteria.
     %              Here, we denote stability with the following convention:
     %                               0 -> Unstable
-    %                               1 -> Stable 
-    %
-    %   Question
-    %   --------
-    %   (1) What does the time value represent? Seconds of the week?
-    %
-    %   (2) The mean heading is computed without accounting for the
-    %       wrapping at 180 or 360 (depending on how you define heading).
-    %       I think you should compute the mean and standard deviation of
-    %       heading using the Yamartino Method. Because we are not doing
-    %       any cork screws or nose dives in the plane, I don't think we
-    %       need to worry about using the Yamartino Method for roll and
-    %       pitch. 
-    %
-    %   (3) Should standard deviation of heading be used in criteria for
-    %       stable flight for roll and pitch?  
+    %                               1 -> Stable    
     %
     %%%%
 

@@ -1,101 +1,33 @@
-%% Main Script for estimating Lambda of c distributions. 
-% Authors: Teodor Vrecica (tvrecica@ucsd.edu) and Luke Colosi (lcolosi@ucsd.edu)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Main Script for estimating Lambda of c distributions  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%--------------------------------- Notes ---------------------------------%
-% Script for estimating lambda of c and other wave breaking statistics 
-% from processed video data using the IO Industries FLARE 12M125-CL
-% camera (4096 by 3072 pixel resolution, 10 bit, 5-Hz sampling rate) 
-% collected onboard a research aircraft. Images are georeferenced using a 
-% Novatel SPAN LN200 Inertial Motion Unit (IMU) coupled to a ProPak6 GPS
-% reciever which provided aircraft trajectory information 
-% (attitude and postion).
-% 
-% This script imports the following processed data: 
-% 
-% (1) Video camera images georeferenced with Trimble software: Consist of
-%     geotiff files where each pixel in the image is assigned a lat/lon or
-%     UTM coordinate based on the position/atitude of the aircraft and the
-%     distortion ofthe lens. Additionally, boresight adjustments (i.e.,
-%     offsets between reference frames the GPS-IMU and the video camera)
-%     are accounted for. 
-%
-% (2) Aircraft trajectory and attitude: Consist of the EO text files that
-%     provide the position and attitude of the aircraft over time from the 
-%     coupled GPS-IMU onboard the research aircraft. This time series is
-%     interpolated to match the time steps of the video camera images.  
-% 
-% For specifics on video and trajectory data processing, see Nick Statom's
-% documentation here: 
-% 
-% https://docs.google.com/document/d/1qbaBH98IW1tJrMfxC6TKL-jQIcMPm7KK_KRrxk3rBb0/edit
-% 
-% The lambda of c calculation steps include the following: 
-% 
-% (1) Load aircraft 
-% 
-% Below are a few tips for running the code. 
-% 
-% (1) This code can be ran locally on your computer or remotely through
-%     whichever airseaserver the data is located on. Either way, your local
-%     computer needs to be connected to the ucsd vpn; use cisco AnyConnect
-%     to do this. If running the code locally, connect to remote server 
-%     through your file system explorer to gain remote access to the data 
-%     (i.e., mount to the remote server on your local computer). 
-%     If running the code on the airseaserver, use remote microsoft desktop
-%     to connect.     
-% 
-% (2) For the code to run in its entirety, it will take hours to days 
-%     possibly (based on the size of the video data being processed and 
-%     how the data is being processed). To avoid running into a small 
-%     mistake which will force you to run the code all over again, execute
-%     this program section by section and verify the processing worked
-%     correctly by looking at the supplemental figures. 
-% 
-% (3) This code has paths to directories and files written using the
-%     windows forward slash convention. This may impact mac users using
-%     this code. 
-% 
-% Some additional notes: 
-% 
-% (1) Vignetting is definited in photography as the reduction of an 
-%     image's brightness or saturation toward the periphery compared to the
-%     image center. For the video camera, the sun glint off the ocean 
-%     surface causes natural vignetting where the image is brightest in
-%     the center of the sun glit and saturated elsewhere. This makes it
-%     challenging to identify wave breaking in the images.
-% 
-%-------------------------------------------------------------------------%
+% See Github repo (https://github.com/lcolosi/WaveBreakingStats/src/README.md) 
+% for documentation.
 
 clc, clearvars, close all
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %------- This is the only section of code you will need to change --------%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- 
-% Set path to raw (non-georeferenced) video images for a given flight
-dirRaw = 'X:\\TFO_2021\Processed\VIDEO\16bit_TIF_Frames\20210519\';
 
-% Set path to georeferenced video images for a given flight 
-dirout = 'X:\\TFO_2021\Processed\VIDEO\Trimble\20210519\';
+% Directories
+dirRaw = 'X:\\TFO_2021\Processed\VIDEO\16bit_TIF_Frames\20210519\';         % Raw (non-georeferenced) video images for a given flight
+dirout = 'X:\\TFO_2021\Processed\VIDEO\Trimble\20210519\';                  % Trimble processed (georeferenced) video images for a given flight
+dirV = 'D:\DEPLOYMENTS\TFO_2021\figs\video\Quality_Control\';               % Verification figures
 
-% Set path to save verification figures
-dirV = 'D:\DEPLOYMENTS\TFO_2021\figs\video\Quality_Control\';
-
-% Set flight stability criteria parameters
-maxPer=[25 25];                                                             % Maximum percent of flight track to be removed at the begin and end of the track. For example, maxPer = [25,25] means that at a minimium, 50 percent(from 25% - 75%) of the flight track will be used in analysis with the 0-25% and 75%-100% removed from the flight track.  
+% Flight stability criteria parameters
+maxPer=[25 25];                                                             % Maximum percent of flight track to be removed at the begin and end of the track. For example, maxPer = [25,25] means that at a minimium, 50 percent (from 25% - 75%) of the flight track will be used in analysis with the 0-25% and 75%-100% removed from the flight track.  
 sigRoll=3;                                                                  % Maximum allowed roll standard deviations for a stable segment.    
 sigPitch=3;                                                                 % Maximum allowed pitch standard deviations for a stable segment.
 sigHeading=6;                                                               % Maximum allowed heading standard deviations for a stable segment.
 
-% Specify whether verification figures will be plotted
-ploton = true; 
+% Select process to run (0 or 1)
+option_ploton = 1;                                                          % Plot verification figures
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-% Make a directory for verification figures if one does not exist
-if ~exist(dirV, 'dir'), mkdir(dirV); end
-
 %% Load EO data and determine time indices of each track in the EO file
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Rename EO directory in dirout path as Trimble_EO 
 if isfolder([dirout 'EO'])
@@ -121,9 +53,12 @@ An=cropText(A);
 % Determine the start and end time indices for each flight tracks.
 tracks = DefineTracks(An);
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Determine aircraft stability for each flight track 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % Note: If flight track is NOT steady, Lambda of c distributions and 
-% whitecap coverage will be determined.  
+% whitecap coverage will not be computed.  
 
 % Identify track stability based on input criteria
 trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An);
@@ -140,7 +75,9 @@ if ploton == true
     plotOutTracks(A,tracks,trackTag,dirstab,An,dirout);
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Remove vignetting and crop out high glint 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Obtain the filenames of the non-georeferenced video images 
 D_Im=dir([dirRaw '*.tif']);

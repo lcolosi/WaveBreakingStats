@@ -14,10 +14,11 @@ Here, I will document the changes made to the wave breaking statistic scripts. A
 
 > The jth roll/pitch/heading observation deviates from the its mean by more than t times its standard deviation plus 1 (for roll and pitch) or 2 (for heading).
 
-> The jth roll/pitch/heading observation 7 seconds away (when the jth observation is within 7 seconds, use the time index at the beginning/end of the track) deviates from its mean by more than t times its standard deviation plus 1 (for roll and pitch) or(for heading).
+> The jth roll/pitch/heading observation 7 seconds (or whatever is specified by tcheck) away (note: when the jth observation is within 7 seconds, use the time index at the beginning/end of the track) deviates from its mean by more than t times its standard deviation plus 1 (for roll and pitch) or(for heading).
 
 There seemed to be two mistakes here: 
-    1. There is no reason I can tell for adding 1 or 2 to `t*\sigma`
+    1. There is no reason I can tell for adding 1 or 2 to `t*std`. The addition was removed. 
+    2. For the roll and pitch abrupt changes, the standard deviation of the heading was used for the 7 second criteria. The standard deviations of the roll and pitch respectively are now being used. 
 
 **Questions**
 1. What does the time value represent in the EO files? Is it seconds of the week? 

@@ -186,7 +186,7 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An)
                 minR=j;
 
                 % Check if jth observation is an abrupt change in roll
-                if abs(A.data(j,4)-mean_r)>t*std_r+1 && abs(A.data(max(tracks(i).Indices(1),j-floor(tCheck/dt)),4)-mean_r)>t*std_r+1
+                if abs(A.data(j,4)-mean_r)>t*std_r && abs(A.data(max(tracks(i).Indices(1),j-floor(tCheck/dt)),4)-mean_r)>t*std_r
                     break
                 end
             end
@@ -198,7 +198,7 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An)
                 maxR=j;
 
                 % Check if jth observation is an abrupt change in roll
-                if abs(A.data(j,4)-mean_r)>t*std_r+1 && abs(A.data(min(tracks(i).Indices(2),j+floor(tCheck/dt)),4)-mean_r)>t*std_r+1
+                if abs(A.data(j,4)-mean_r)>t*std_r && abs(A.data(min(tracks(i).Indices(2),j+floor(tCheck/dt)),4)-mean_r)>t*std_r
                     break
                 end
             end
@@ -211,7 +211,7 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An)
                 minP=j;
                 
                 % Check if jth observation is an abrupt change in pitch
-                if abs(A.data(j,5)-mean_p)>t*std_p+1 && abs(A.data(max(tracks(i).Indices(1),j-floor(tCheck/dt)),5)-mean_p)>t*std_p+1
+                if abs(A.data(j,5)-mean_p)>t*std_p && abs(A.data(max(tracks(i).Indices(1),j-floor(tCheck/dt)),5)-mean_p)>t*std_p
                     break
                 end
             end
@@ -223,7 +223,7 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An)
                 maxP=j;
 
                 % Check if jth observation is an abrupt change in pitch
-                if abs(A.data(j,5)-mean_p)>t*std_p+1 && abs(A.data(min(tracks(i).Indices(2),j+floor(tCheck/dt)),5)-mean_p)>t*std_p+1
+                if abs(A.data(j,5)-mean_p)>t*std_p && abs(A.data(min(tracks(i).Indices(2),j+floor(tCheck/dt)),5)-mean_p)>t*std_p
                     break
                 end
             end
@@ -236,7 +236,7 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An)
                 minH=j;
 
                 % Check if jth observation is an abrupt change in heading
-                if abs(A.data(j,6)-mean_h)>t*std_h+2 && abs(A.data(max(tracks(i).Indices(1),j-floor(tCheck/dt)),6)-mean_h)>t*std_h+2
+                if abs(A.data(j,6)-mean_h)>t*std_h && abs(A.data(max(tracks(i).Indices(1),j-floor(tCheck/dt)),6)-mean_h)>t*std_h
                     break
                 end
             end
@@ -248,7 +248,7 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An)
                 maxH=j;
 
                 % Check if jth observation is an abrupt change in heading
-                if abs(A.data(j,6)-mean_h)>t*std_h+2 && abs(A.data(min(tracks(i).Indices(2),j+floor(tCheck/dt)),6)-mean_h)>t*std_h+2
+                if abs(A.data(j,6)-mean_h)>t*std_h && abs(A.data(min(tracks(i).Indices(2),j+floor(tCheck/dt)),6)-mean_h)>t*std_h
                     break
                 end
             end
@@ -264,7 +264,7 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An)
                 trackTag(i).range=[max([minR,minP,minH]) min([maxR,maxP,maxH])];
             end
         
-        % If the start and end time indices for the ith track are empty, label track as unstable 
+        % If the start and end time indices for the ith track are empty, label the track as unstable 
         else
             trackTag(i).stable=0;
         end

@@ -12,11 +12,11 @@ Here, I will document the changes made to the wave breaking statistic scripts. A
 
 2. Changed code for detecting abrupt changes in angles. Recall that abrupt changes wereoriginaly deteched using two approaches in the code: 
 
-> The jth roll/pitch/heading observation deviates from the its mean by more than t times its standard deviation plus 1 (for roll and pitch) or 2 (for heading).
+    1. The jth roll/pitch/heading observation deviates from the its mean by more than t times its standard deviation plus 1 (for roll and pitch) or 2 (for heading).
 
-> The jth roll/pitch/heading observation 7 seconds (or whatever is specified by tcheck) away (note: when the jth observation is within 7 seconds, use the time index at the beginning/end of the track) deviates from its mean by more than t times its standard deviation plus 1 (for roll and pitch) or(for heading).
+    2. The jth roll/pitch/heading observation 7 seconds (or whatever is specified by tcheck) away (note: when the jth observation is within 7 seconds, use the time index at the beginning/end of the track) deviates from its mean by more than t times its standard deviation plus 1 (for roll and pitch) or(for heading).
 
-There seemed to be two mistakes here: 
+    There seemed to be two mistakes here: 
     1. There is no reason I can tell for adding 1 or 2 to `t*std`. The addition was removed. 
     2. For the roll and pitch abrupt changes, the standard deviation of the heading was used for the 7 second criteria. The standard deviations of the roll and pitch respectively are now being used. 
 

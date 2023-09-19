@@ -24,5 +24,6 @@ Here, I will document the changes made to the wave breaking statistic scripts. A
 1. What does the time value represent in the EO files? Is it seconds of the week? 
 
 **Comment** 
-1. Instead of using the standard deviation of the roll, pitch, and heading to figure out when the plane is turning off the flight line, the gradient of the roll pitch and heading (computed over 5-10 second intervals) may be used.  
+1. Instead of using the standard deviation of the roll, pitch, and heading to figure out when the plane is turning off the flight line, the gradient of the roll pitch and heading (computed over 5-10 second intervals) may be used.
+3. I need to add the tuning parameters within the `trackSteady.m` to the function's arguments so they can be toggled from `Main.m`
 

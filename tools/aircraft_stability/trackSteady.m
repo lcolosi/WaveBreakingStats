@@ -1,7 +1,7 @@
-function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An)
+function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,Shift,t,tCheck,An)
 
     %%%%
-    % trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An)
+    % trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,,shift,t,tcheckAn)
     %
     % Function for definning whether tracks is steady by analyzing roll,
     % pitch, and heading of aircraft. In order to avoid possible change of
@@ -24,6 +24,16 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An)
     %              segment.
     %   sigHeading : Maximum allowed heading standard deviations in the 
     %                stable segment.
+    %   Shift : Array of size Nx2 containing N potenital shifts in 
+    %           beginning and end percentages of the flight track in case
+    %           the flight track cropped by maxPer is unstable. Column 1
+    %           contains shifts in beginning flight track index and Column 2
+    %           contains shifts in end flight track index. 
+    %   t : Number of standard deviations of either roll, pitch, or heading
+    %       that constitute an abrupt change in attitude of the plane.
+    %   tcheck : Time interval between the jth roll/pitch/heading 
+    %            observation to check if there is an abrupt change in 
+    %            attitude shortly after the jth observation. Units: seconds
     %   An : Cropped GPSTime station cell array containing the time (UTC),
     %        track number, and image number.
     % 
@@ -36,25 +46,6 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An)
     %                               1 -> Stable    
     %
     %%%%
-
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %-------- Tuning parameters for determining flight stability ---------%
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    
-    % Three potenital shifts in beginning/end percentages of the
-    % flight track in case initial flight track is unstable 
-    Shift=[-0.8*maxPer(1) 0.8*maxPer(2);0.8*maxPer(1) -0.8*maxPer(2);0 0];
-
-    % Number of standard deviations of either roll, pitch, or heading that
-    % constitute an abrupt change in attitude of the plane.
-    t = 4; 
-
-    % Time interval between the jth roll/pitch/heading observation to check
-    % if their is an abrupt change in attitude shortly after the jth 
-    % observation.     
-    tCheck = 7;                                                             % Units: seconds
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % Loop through tracks
     for i=1:length(tracks)
@@ -75,7 +66,7 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An)
 
             % Loop through three time interval shifting cases if flight
             % track with beginning and end cropped is unstable 
-            for jjj=1:3
+            for jjj=1:size(Shift,1)
 
                 % Set maximum number of images to be removed at begining/end of flight track
                 rmN=floor(maxPerTemp/100*(tracks(i).Indices(2)-tracks(i).Indices(1)+1));
@@ -101,27 +92,6 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,An)
                     % Flight track is stable
                     trackTag(i).stable=1;
                 end
-                
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                %------------ Old code which I think is wrong ------------%
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%                 % If heading is near the wrapping point (i.e., close to 0
-%                 % or 360), subtract or add 360 degrees respectively to
-%                 % compute std of heading properly. (Mean heading is not
-%                 % computed correcting to account for wrapping)
-%                 if mean(heading)>270
-%                     heading(heading<90)=heading(heading<90)+360;
-%                 elseif mean(heading)<90
-%                     heading(heading>270)=heading(heading>270)-360;
-%                 end
-%                 
-%                 % Check stability criteria for each attitude angle
-%                 if std(roll)>sigRoll | std(pitch)>sigPitch | std(heading)>sigHeading
-%                     trackTag(i).stable=0;
-%                 else
-%                     trackTag(i).stable=1;
-%                 end
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
                 % Case 1: Flight track is stable -> end loop 
                 if trackTag(i).stable==1

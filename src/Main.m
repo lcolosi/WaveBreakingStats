@@ -17,16 +17,16 @@ dirProc = 'X:\\TFO_2021\Processed\VIDEO\Trimble\20210519\';                 % Tr
 dirV = 'D:\DEPLOYMENTS\TFO_2021\figs\video\Quality_Control\';               % Verification figures
 
 % Flight stability criteria parameters
-maxPer = [25 25];                                                             % Maximum percent of flight track to be removed at the begin and end of the track. For example, maxPer = [25,25] means that at a minimium, 50 percent (from 25% - 75%) of the flight track will be used in analysis with the 0-25% and 75%-100% removed from the flight track.  
-sigRoll = 3;                                                                  % Maximum allowed roll standard deviations for a stable segment.    
-sigPitch = 3;                                                                 % Maximum allowed pitch standard deviations for a stable segment.
-sigHeading = 6;                                                               % Maximum allowed heading standard deviations for a stable segment.
-Shift = [-0.8*maxPer(1) 0.8*maxPer(2);0.8*maxPer(1) -0.8*maxPer(2);0 0];      % Shifts in flight track for finding a stable fligt period
+maxPer = [25 25];                                                           % Maximum percent of flight track to be removed at the begin and end of the track. For example, maxPer = [25,25] means that at a minimium, 50 percent (from 25% - 75%) of the flight track will be used in analysis with the 0-25% and 75%-100% removed from the flight track.  
+sigRoll = 3;                                                                % Maximum allowed roll standard deviations for a stable segment.    
+sigPitch = 3;                                                               % Maximum allowed pitch standard deviations for a stable segment.
+sigHeading = 6;                                                             % Maximum allowed heading standard deviations for a stable segment.
+Shift = [-0.8*maxPer(1) 0.8*maxPer(2);0.8*maxPer(1) -0.8*maxPer(2);0 0];    % Shifts in flight track for finding a stable fligt period
 Nstd = 4;                                                                   % Number of standard deviations of either roll, pitch, or heading that constitute an abrupt change in attitude of the plane
 tCheck = 7;                                                                 % Time interval between the jth roll/pitch/heading observation to check if their is an abrupt change in attitude shortly after the jth observation.
 
 % Select process to run (0 or 1)
-option_ploton = 1;                                                          % Plot verification figures
+option_plot = 1;                                                            % Plot verification figures
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Load EO data and determine time indices of each track in the EO file
@@ -68,7 +68,7 @@ trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,Shift,Nstd,tC
 
 % Plot headings in flight tracks, with all other data (used portion of 
 % the track, whether is it labeled as steady or not).
-if option_ploton == 1
+if option_plot == 1
 
     % Create a subdirectory for flight trajectory and stability plots
     dirTS = [dirV 'Flight_Trajectories_And_Stability\'];

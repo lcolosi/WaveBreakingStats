@@ -7,11 +7,12 @@
 
 
 # Docs directory
-
+docs/
 
 # Src directory
 src/*.asv
 
 # Tools directory
-tools/*.asv
-
+tools/EO_file_processing/*.asv
+tools/aircraft_stability/*.asv
+tools/vignette_removal/*.asv

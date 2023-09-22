@@ -17,7 +17,11 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,Shif
     %   A : Aircraft trajectory and atitude data array.
     %   tracks : Structure containing the start and end time indicies of
     %            each flight track.
-    %   maxPer : Step size in search.
+    %   maxPer : Maximum percent of flight track to be removed at the begin
+    %            and end of the track. For example, maxPer = [25,25] means
+    %            that at a minimium, 50 percent (from 25% - 75%) of the
+    %            flight track will be used in analysis with the 0-25%
+    %            and 75%-100% removed from the flight track.
     %   sigRoll : Maximum allowed roll standard deviations in the stable
     %             segment. 
     %   sigPitch : Maximum allowed pitch standard deviations in the stable
@@ -39,12 +43,16 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,Shif
     % 
     %   Returns
     %   -------
-    %   trackTag : Identifier for whether the Track is stable or unstable 
-    %              based on the inputted roll, pitch, and heading criteria.
-    %              Here, we denote stability with the following convention:
-    %                               0 -> Unstable
-    %                               1 -> Stable    
-    %
+    %   trackTag : Structure with two fields: 
+    %               (1) stable: An identifier for whether the Track is 
+    %                           stable or unstable based on the inputted
+    %                           roll, pitch, and heading criteria. Here, we
+    %                           denote stability with the following
+    %                           convention:
+    %                                   0 -> Unstable
+    %                                   1 -> Stable    
+    %               (2) range: The start and end time indices of the stable
+    %                          flight track.  
     %%%%
 
     % Loop through tracks
@@ -62,7 +70,9 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,Shif
             % begin and end of the track
             maxPerTemp=maxPer;
             
-            %--- Check if there is a region where the flight is steady ---%
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %% Check for stable flight period using maxPer and shift
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
             % Loop through three time interval shifting cases if flight
             % track with beginning and end cropped is unstable 
@@ -104,9 +114,9 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,Shif
                 end
                 
             end
-            
+
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            %---- Final determine time indices for stable flight track ---% 
+            %% Final determine time indices for stable flight track 
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % After verifying flight stability by the standard deviation of
             % the entire cropped flight track, we can look to extend the 
@@ -128,6 +138,10 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,Shif
             % Once, we hit an abrupt change in angle or are approaching a
             % time period with an abrupt direction change, the loop breaks
             % and the index is saved.  
+            % 
+            % Note that we use the mean and standard deviation of the
+            % roll/pitch/heading from the stable time period found above by
+            % applying maxPer and shift parameters.  
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
             % Compute the time interval between measurements (units: seconds)
@@ -208,11 +222,15 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,Shif
                 end
             end
             
-            % Case 1: Flight track is unstable -> range set to NaN 
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %% Save flight stability results in trackTag 
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+            % Flight track is unstable -> range set to NaN 
             if trackTag(i).stable==0
                 trackTag(i).range=nan;
 
-            % Case 2: Flight track is stable -> set lower limit to maximum time 
+            % Flight track is stable -> set lower limit to maximum time 
             % index of minimum roll, pitch, and heading time indices (vice
             % versa for upper limit)
             else

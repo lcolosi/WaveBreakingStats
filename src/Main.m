@@ -11,6 +11,9 @@ clc, clearvars, close all
 %------- This is the only section of code you will need to change --------%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% Start date of flight in UTC
+StartDate = '20210519';                                                     % Time format: 'yyyymmdd'
+
 % Directories
 dirRaw = 'X:\\TFO_2021\Processed\VIDEO\16bit_TIF_Frames\20210519\';         % Raw (non-georeferenced) video images for a given flight
 dirProc = 'X:\\TFO_2021\Processed\VIDEO\Trimble\20210519\';                 % Trimble processed (georeferenced) video images for a given flight
@@ -27,6 +30,9 @@ tCheck = 7;                                                                 % Ti
 
 % Select process to run (0 or 1)
 option_plot = 1;                                                            % Plot verification figures
+
+% Set text interpreter
+set_interpreter('latex')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Load EO data and determine time indices of each track in the EO file
@@ -56,9 +62,13 @@ An = cropText(A);
 % Determine the start and end time indices for each flight tracks.
 tracks = DefineTracks(An);
 
+% Convert from gps time in seconds of the week to UTC time
+%gps_time = str2num(cell2mat(An(:,1)));
+%utc_time = gpssw2utcdn(gps_time,StartDate);
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Determine aircraft stability for each flight track 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
 % Note: If flight track is NOT steady, Lambda of c distributions and 
 % whitecap coverage will not be computed.  

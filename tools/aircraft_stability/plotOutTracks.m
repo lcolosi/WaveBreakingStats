@@ -1,39 +1,64 @@
-function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc)
+function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc)
 
     %%%%
-    % plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc)
+    % plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc)
     %
-    % Plotting function which preforms the following:  
-    %   (1) Displays uncropped flight tracks, 
-    %   (2) Indicating whether they are stable or not, 
-    %   (3) Indicates which portion of the track was cropped (at the begining and
-    %       at the end).
+    % Plotting function which generates the following figures:  
+    %   (1) The trajectory of all flight tracks on a lat-lon grid in movie
+    %       and regular figure formats.   
+    %   (2) The individual flight trajectories with the time series of 
+    %       roll, pitch, and heading.  
+    % In addition, the second figure's title indicates whether the track 
+    % is stable or not.
     %
     %   Parameters
     %   ----------
-    %   A : Aircraft trajectory and atitude data array.
-    %   tracks : Structure containing the start and end time indicies of
-    %            each uncropped flight track.
-    %   trackTag : Identifier for whether the Track is stable or unstable 
-    %              based on the inputted roll, pitch, and heading criteria.
-    %              Here, we denote stability with the following convention:
-    %                               0 -> Unstable
-    %                               1 -> Stable 
-    %   dirTS : Path to directory where figures will be saved.  
-    %   An : Cropped GPSTime station cell array containing the time (UTC),
-    %        track number, and image number.
-    %   dirProc : Path to Trimble processed (georeferenced) video images 
-    %             for a given flight
+    %   A        : Aircraft trajectory and atitude data array.
+    %   tracks   : Structure containing the start and end time indicies of
+    %              each uncropped flight track.
+    %   trackTag : Structure with three fields: 
+    %               (1) stable: An identifier for whether the Track is 
+    %                           stable or unstable based on the inputted
+    %                           roll, pitch, and heading criteria. Here, we
+    %                           denote stability with the following
+    %                           convention:
+    %                                   0 -> Unstable
+    %                                   1 -> Stable    
+    %               (2) range: The start and end time indices of the stable
+    %                          flight track. 
+    %               (3) stats: An array containing the statistics from the
+    %                          initial stability analysis using the maxPer 
+    %                          and shift parameters. The array has the
+    %                          following structure: 
+    %                                  [mean_r, std_r;... 
+    %                                   mean_p, std_p;...
+    %                                   mean_h, std_h; 
+    %                                   rmN(1), rmN(2)]
+    %                           where mean and standard deviations are
+    %                           computed over the interval: 
+    %                                   tracks(i).Indices(1)+rmN(1) to 
+    %                                   tracks(i).Indices(2)-rmN(2) 
+    %   dirTS    : Path to directory where figures will be saved.  
+    %   An       : Cropped GPSTime station cell array containing the time 
+    %              (UTC), track number, and image number.
+    %   dirProc  : Path to Trimble processed (georeferenced) video images 
+    %              for a given flight
+    %   sc       : Stability criteria matrix which contains the criteria for the
+    %              standard deviation for the roll, pitch, and heading (sigRoll,
+    %              sigPitch, sigHeading respectively) as well as the number of
+    %              standard deviations (Nstd) for the roll, pitch, or heading
+    %              that constitute an abrupt change in attitude of the plane. sc 
+    %              has the following array structure  
+    %             sc = [sigRoll,sigPitch,sigHeading,Nstd];
     % 
     %   Returns
     %   -------
-    %   Three figures are saved to the dirTS directory: 
-    %       (1)  
+    %   The three figures are saved to the dirTS directory.  
     % 
     %   Notes
     %   -----
-    %   This functions requires the mapping toolbox. Functions projinv and
-    %   geotiffinto are apart of this toolbox. 
+    %   This functions requires the mapping toolbox to access projinv and
+    %   geotiffinto functions. 
     % 
     %   Questions
     %   ---------
@@ -148,7 +173,7 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc)
     close(writerObj); 
 
     % Save figure 
-    print(gcf,'-dpng', [dirTS 'flight_trjectory.png'], '-r300');
+    print(gcf,'-dpng', [dirTS 'flight_trajectory.png'], '-r300');
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% Plot aircraft stability for each track
@@ -168,7 +193,7 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc)
             end
 
             % Obtain time indicies for ith flight track     
-            indicesFT=tracks(i).Indices(1):1:tracks(i).Indices(2);
+            indicesFT = tracks(i).Indices(1):1:tracks(i).Indices(2);
             indicesCT = trackTag(i).range(1):trackTag(i).range(2); 
 
             % Grab roll, pitch, and heading time series data along entire
@@ -180,7 +205,7 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc)
             % Compute a time vector for seconds since the begin of the
             % flight track
             dt = str2num(An{tracks(i).Indices(1)+1,1})-str2num(An{tracks(i).Indices(1),1});
-            time_s = (1:length(h_ts))*dt; time_sc = (1:length(h_ts))*dt;
+            time_s = (1:length(h_ts))*dt; 
 
             % Generate figure
             figure('Name', ['Aircraft stability - Flight Track' num2str(i)]);
@@ -217,23 +242,37 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc)
             subplot(5,1,3)
                 
                 % Plot from full flight trajectory
-                plot(time_s,h_ts,'color','black','LineWidth',2)
+                plot(time_s,h_ts,'.','color','black','MarkerSize',5)
                 
-                % Plot boundaries of stable flight
+                % Plot boundaries of stable flight and stability criteria
                 hold on
                 if trackTag(i).stable==1
-                    % Compute the start and end times for the stable flight period
+                    % Display start and end times for the stable flight period
                     to = (trackTag(i).range(1)-tracks(i).Indices(1))*dt;
                     tf = (trackTag(i).range(2)-tracks(i).Indices(1))*dt;
                     xline(to,'color','red','LineWidth',2)
                     xline(tf,'color','red','LineWidth',2)
+                    
+                    % Display stability criteria
+                    max_std = sc(4)*trackTag(i).stats(3,2)+trackTag(i).stats(3,1);
+                    min_std = -sc(4)*trackTag(i).stats(3,2)+trackTag(i).stats(3,1);
+                    yline([max_std min_std],'--b',{'$t\sigma_h$', '$-t\sigma_h$'})
+
+                    % Display initial stable range (determined from maxPer
+                    % and shift)
+                    idx_o = tracks(i).Indices(1)+trackTag(i).stats(4,1);    
+                    idx_f = tracks(i).Indices(2)-trackTag(i).stats(4,2);
+                    time_si = time_s(indicesFT >= idx_o & indicesFT <= idx_f);
+                    fx = [time_si(1), time_si(1), time_si(end), time_si(end)];
+                    fy = [min_std-4, max_std+4, max_std+4, min_std-4];
+                    fill(fx,fy,'b','FaceAlpha',0.1,'EdgeColor','none')
                 end
     
                 % Set figure attributes 
                 set(gca,'fontname',font,'FontSize',fontsize,'tickdir','both')
                 ylabel('Heading ($^{\circ}$)','fontname',font,'FontSize',fontsize)
                 xlim([0 tracks(i).Indices(2)-tracks(i).Indices(1)]*dt)
-                % ylim([mean(h_ts)-8 mean(h_ts)+8])
+                ylim([min_std-4 max_std+4])                                
                 box on
                 grid on
             
@@ -241,7 +280,7 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc)
             subplot(5,1,4)
             
                 % Plot from full flight trajectory
-                plot(time_s,p_ts,'color','black','LineWidth',2)
+                plot(time_s,p_ts,'.','color','black','MarkerSize',5)
                 
                 % Plot boundaries of stable flight
                 hold on
@@ -251,13 +290,27 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc)
                     tf = (trackTag(i).range(2)-tracks(i).Indices(1))*dt;
                     xline(to,'color','red','LineWidth',2)
                     xline(tf,'color','red','LineWidth',2)
+
+                    % Display stability criteria
+                    max_std = sc(4)*trackTag(i).stats(2,2)+trackTag(i).stats(2,1);
+                    min_std = -sc(4)*trackTag(i).stats(2,2)+trackTag(i).stats(2,1);
+                    yline([max_std min_std],'--b',{'$t\sigma_p$', '$-t\sigma_p$'})
+
+                    % Display initial stable range (determined from maxPer
+                    % and shift)
+                    idx_o = tracks(i).Indices(1)+trackTag(i).stats(4,1); 
+                    idx_f = tracks(i).Indices(2)-trackTag(i).stats(4,2);
+                    time_si = time_s(indicesFT >= idx_o & indicesFT <= idx_f);
+                    fx = [time_si(1), time_si(1), time_si(end), time_si(end)];
+                    fy = [min_std-4, max_std+4, max_std+4, min_std-4];
+                    fill(fx,fy,'b','FaceAlpha',0.1,'EdgeColor','none')
                 end
 
                 % Set figure attributes 
                 set(gca,'fontname',font,'FontSize',fontsize,'tickdir','both')
                 ylabel('Pitch ($^{\circ}$)','fontname',font,'FontSize',fontsize)
                 xlim([0 tracks(i).Indices(2)-tracks(i).Indices(1)]*dt)
-                % ylim([mean(p_ts)-8 mean(p_ts)+8])
+                ylim([min_std-4 max_std+4]) 
                 box on
                 grid on
             
@@ -265,7 +318,7 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc)
             subplot(5,1,5)
             
                 % Plot from full flight trajectory
-                plot(time_s,r_ts,'color','black','LineWidth',2)
+                plot(time_s,r_ts,'.','color','black','MarkerSize',5)
                 
                 % Plot boundaries of stable flight
                 hold on
@@ -275,6 +328,20 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc)
                     tf = (trackTag(i).range(2)-tracks(i).Indices(1))*dt;
                     xline(to,'color','red','LineWidth',2)
                     xline(tf,'color','red','LineWidth',2)
+
+                    % Display stability criteria
+                    max_std = sc(4)*trackTag(i).stats(1,2)+trackTag(i).stats(1,1);
+                    min_std = -sc(4)*trackTag(i).stats(1,2)+trackTag(i).stats(1,1);
+                    yline([max_std min_std],'--b',{'$t\sigma_r$', '$-t\sigma_r$'})
+
+                    % Display initial stable range (determined from maxPer
+                    % and shift)
+                    idx_o = tracks(i).Indices(1)+trackTag(i).stats(4,1); 
+                    idx_f = tracks(i).Indices(2)-trackTag(i).stats(4,2);
+                    time_si = time_s(indicesFT >= idx_o & indicesFT <= idx_f);
+                    fx = [time_si(1), time_si(1), time_si(end), time_si(end)];
+                    fy = [min_std-4, max_std+4, max_std+4, min_std-4];
+                    fill(fx,fy,'b','FaceAlpha',0.1,'EdgeColor','none')
                 end
 
                 % Set figure attributes 
@@ -282,7 +349,7 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc)
                 xlabel('Time (sec)','fontname',font,'FontSize',fontsize)
                 ylabel('Roll ($^{\circ}$)','fontname',font,'FontSize',fontsize)
                 xlim([0 tracks(i).Indices(2)-tracks(i).Indices(1)]*dt)
-                % ylim([mean(r_ts)-8 mean(r_ts)+8])
+                ylim([min_std-4 max_std+4]) 
                 box on
                 grid on
 
@@ -293,8 +360,6 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc)
 
     %% Development Code
     
-%     load('D:\MASS\Processed\L_Computations\L_Computations\Test\TFOEx21_DEP01_BuoyGPS.mat');
-% 
 %     % Obtain GPS time at beginning and end of ith full flight track    
 %     vreme=str2num(cell2mat(An(tracks(i).Indices,1)));
 %     
@@ -302,21 +367,3 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc)
 %     tracksTime=StartTime+(vreme(1)+vreme(2))/2/86400;
 % 
 %     dt=str2num(An{tracks(i).Indices(1)+1,1})-str2num(An{tracks(i).Indices(1),1});
-% 
-%     lonn=interp1(BuoyTimeD1,-BuoyLON_D1,tracksTime);
-%     latt=interp1(BuoyTimeD1,BuoyLAT_D1,tracksTime);
-%     scatter(lonn,latt,'markerfacecolor',cm(i,:));
-% 
-%     % assignin('base','Temp1',lonMax);
-%     % assignin('base','Temp2',lonMin);
-% 
-%     % Minimum extent of UTM Zone 10 coordinates 
-%     minX=min(A.data(:,1));                                                  % Easting (Units: m)
-%     minY=min(A.data(:,2));                                                  % Northing (Units: m)
-
-% % Compute the start and end times for the stable flight period
-% to = (trackTag(i).range(1)-tracks(i).Indices(1))*dt;
-% tf = (trackTag(i).range(2)-tracks(i).Indices(1))*dt;
-% 
-% % Obtain the time series for the stable flight track 
-% time_sc = to:dt:tf;

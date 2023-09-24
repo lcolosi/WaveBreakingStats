@@ -10,13 +10,13 @@ function tracks = DefineTracks(An)
     %
     %   Parameters
     %   ----------
-    %   An : Cropped GPSTime station cell array containing the time (UTC),
-    %        track number, and image number. 
+    %   An     : Cropped GPSTime station cell array containing the time (UTC),
+    %            track number, and image number. 
     % 
     %   Returns
     %   -------
     %   tracks : Structure containing the start and end time indicies of
-    %   each flight track. 
+    %            each flight track. 
     %
     %%%%
 

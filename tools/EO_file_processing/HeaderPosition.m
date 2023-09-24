@@ -14,8 +14,8 @@ function Counter=HeaderPosition(EOpath,String)
     %
     %   Parameters
     %   ----------
-    %   EOpath : Path to EO text file.
-    %   String : Character string in the last row of the header
+    %   EOpath  : Path to EO text file.
+    %   String  : Character string in the last row of the header
     %            (cooresponds to the row above the data).
     % 
     %   Returns

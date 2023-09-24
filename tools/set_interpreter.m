@@ -10,8 +10,8 @@ function set_interpreter(interpreter)
     %   ----------
     %   Interpreter : Specifies the text interpreter of the text. Options
     %                 include: 
-    %                   'none': Display literal characters.
-    %                   'tex' : Interpret characters using a subset of TeX markup.
+    %                   'none'  : Display literal characters.
+    %                   'tex'   : Interpret characters using a subset of TeX markup.
     %                   'latex' : Interpret characters using LaTeX markup.      
     % 
     %   Returns

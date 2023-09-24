@@ -15,9 +15,10 @@ clc, clearvars, close all
 StartDate = '20210519';                                                     % Time format: 'yyyymmdd'
 
 % Directories
-dirRaw = 'X:\\TFO_2021\Processed\VIDEO\16bit_TIF_Frames\20210519\';         % Raw (non-georeferenced) video images for a given flight
-dirProc = 'X:\\TFO_2021\Processed\VIDEO\Trimble\20210519\';                 % Trimble processed (georeferenced) video images for a given flight
-dirV = 'D:\DEPLOYMENTS\TFO_2021\figs\video\Quality_Control\';               % Verification figures
+dirRaw = 'X:\\TFO_2021\Processed\VIDEO\16bit_TIF_Frames\20210519\';            % Raw (non-georeferenced) video images for a given flight
+dirProc = 'X:\\TFO_2021\Processed\VIDEO\Trimble\20210519\';                    % Trimble processed (georeferenced) video images for a given flight
+dirV = 'D:\DEPLOYMENTS\TFO_2021\figs\video\Quality_Control\20210519\';         % Verification figures
+dirOut = 'D:\DEPLOYMENTS\TFO_2021\data\video\Intermediate_Products\20210519\'; % Intermediate data products (in .mat files)
 
 % Flight stability criteria parameters
 maxPer = [25 25];                                                           % Maximum percent of flight track to be removed at the begin and end of the track. For example, maxPer = [25,25] means that at a minimium, 50 percent (from 25% - 75%) of the flight track will be used in analysis with the 0-25% and 75%-100% removed from the flight track.  
@@ -28,8 +29,12 @@ Shift = [-0.8*maxPer(1) 0.8*maxPer(2);0.8*maxPer(1) -0.8*maxPer(2);0 0];    % Sh
 Nstd = 4;                                                                   % Number of standard deviations of either roll, pitch, or heading that constitute an abrupt change in attitude of the plane
 tCheck = 7;                                                                 % Time interval between the jth roll/pitch/heading observation to check if their is an abrupt change in attitude shortly after the jth observation.
 
+% Vignette removal parameters
+winSize = 7;
+
 % Select process to run (0 or 1)
-option_plot = 1;                                                            % Plot verification figures
+option_plot       = 1;                                                      % Plot verification figures
+option_image_proc = 1;                                                      % Process raw images and generate intermediate data products (unnecessary if these intermediate products are already generated and you just want to work lambda of c distribution code)
 
 % Set text interpreter
 set_interpreter('latex')
@@ -69,7 +74,7 @@ tracks = DefineTracks(An);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Determine aircraft stability for each flight track 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-
+ 
 % Note: If flight track is NOT steady, Lambda of c distributions and 
 % whitecap coverage will not be computed.  
 
@@ -84,8 +89,11 @@ if option_plot == 1
     dirTS = [dirV 'Flight_Trajectories_And_Stability\'];
     if ~exist(dirTS, 'dir'), mkdir(dirTS); end
     
+    % Set up stability criteria matrix
+    sc = [sigRoll,sigPitch,sigHeading,Nstd];
+
     % Generate plots
-    plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc);
+    plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -98,49 +106,43 @@ D_Im=dir([dirRaw '*.tif']);
 % Define tracks in images
 tracks_Im = DefineTracksIm(D_Im,tracks);
 
-return
-% First we obtain the mean of the image and of std for each track. This is
-% computed for the stable portion of the tracks, as indicated in trackTag
-% variable.
+% Preform image processing 
+if option_image_proc == 1
 
-% The RM_Nr and meanOriginal variables check for significant variations in
-% image lighting. RM_Nr represents image numbers to be removed, and
-% meanOriginal is the mean lighting in every image
+    % Compute the mean brightness and standard deviation of each track
+    [meanIm,stdIm,RM_Nr,meanOriginal]=getImMeanStd(dirRaw,D_Im,tracks_Im,trackTag,tracks,winSize,dirProc);
+    
+    % Save output from getImMeanStd 
+    save([dirout 'mean_Images_Per_Track.mat'],'meanIm','stdIm','RM_Nr','meanOriginal');
+    
+    
+    % Next, the raw images are processed (std and mean brightness are
+    % equalized), and are saved to the Output folder (dirout\Output).
+    
+    
+    % Export images with vignetting removed
+    % dirProcessed='\\Airseaserver28\d\MASS\RAW\LCDRI_2017\VIDEO\TIFF_16BIT_EXPORT_Corrected\20170323\';
+    dirProcessed=[dirProc 'nongeoreferenced_Images_With_Vignetting_Removed_V2\'];
+    if ~exist(dirProcessed, 'dir'), mkdir(dirProcessed); end
+    mina2=saveImage_test(dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirProcessed);
+    
+    %Save mask images
+    dirProcessed=[dirProc 'mask_For_Determining_High_Glint_Areas_V2\'];
+    if ~exist(dirProcessed, 'dir'), mkdir(dirProcessed); end
+    mina2=saveImageMask(dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirProcessed);
+    
+    % Eliminate areas with high glint. Std mag determines the number of
+    % standard deviations for categorizing high glint areas.
+    stdMag=-0.1;
+    [Glint,Glint_mask]=det_glint(meanIm,stdMag,tracks,trackTag);
+    
+    dirV=[dirProc 'Quality_Control\Vignetting\'];
+    if ~exist(dirV, 'dir'), mkdir(dirV); end
+    % Finally, the original and processed images are plotted out for
+    % comparison. The mean image and mean std are also plotted out. 
+    plotProcessedImages(dirV,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,Glint);
 
-winSize=7;
-[meanIm,stdIm,RM_Nr,meanOriginal]=getImMeanStd_V5(dirRaw,D_Im,tracks_Im,trackTag,tracks,winSize,dirProc);
-
-dirV=[dirProc 'Saved_Matlab_Data\'];
-if ~exist(dirV, 'dir'), mkdir(dirV); end
-save([dirV 'mean_Images_Per_Track.mat'],'meanIm','stdIm','RM_Nr','meanOriginal');
-
-
-% Next, the raw images are processed (std and mean brightness are
-% equalized), and are saved to the Output folder (dirout\Output).
-
-
-% Export images with vignetting removed
-% dirProcessed='\\Airseaserver28\d\MASS\RAW\LCDRI_2017\VIDEO\TIFF_16BIT_EXPORT_Corrected\20170323\';
-dirProcessed=[dirProc 'nongeoreferenced_Images_With_Vignetting_Removed_V2\'];
-if ~exist(dirProcessed, 'dir'), mkdir(dirProcessed); end
-mina2=saveImage_test(dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirProcessed);
-
-%Save mask images
-dirProcessed=[dirProc 'mask_For_Determining_High_Glint_Areas_V2\'];
-if ~exist(dirProcessed, 'dir'), mkdir(dirProcessed); end
-mina2=saveImageMask(dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirProcessed);
-
-% Eliminate areas with high glint. Std mag determines the number of
-% standard deviations for categorizing high glint areas.
-stdMag=-0.1;
-[Glint,Glint_mask]=det_glint(meanIm,stdMag,tracks,trackTag);
-
-dirV=[dirProc 'Quality_Control\Vignetting\'];
-if ~exist(dirV, 'dir'), mkdir(dirV); end
-% Finally, the original and processed images are plotted out for
-% comparison. The mean image and mean std are also plotted out. 
-plotProcessedImages(dirV,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,Glint);
-
+end
 
 %% Build and execute .bat file for georeferencing processed images
 

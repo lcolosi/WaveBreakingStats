@@ -14,36 +14,38 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,Shif
     %
     %   Parameters
     %   ----------
-    %   A : Aircraft trajectory and atitude data array.
-    %   tracks : Structure containing the start and end time indicies of
-    %            each flight track.
-    %   maxPer : Maximum percent of flight track to be removed at the begin
-    %            and end of the track. For example, maxPer = [25,25] means
-    %            that at a minimium, 50 percent (from 25% - 75%) of the
-    %            flight track will be used in analysis with the 0-25%
-    %            and 75%-100% removed from the flight track.
-    %   sigRoll : Maximum allowed roll standard deviations in the stable
-    %             segment. 
-    %   sigPitch : Maximum allowed pitch standard deviations in the stable
-    %              segment.
+    %   A          : Aircraft trajectory and atitude data array.
+    %   tracks     : Structure containing the start and end time indicies of
+    %                each flight track.
+    %   maxPer     : Maximum percent of flight track to be removed at the begin
+    %                and end of the track. For example, maxPer = [25,25] means
+    %                that at a minimium, 50 percent (from 25% - 75%) of the
+    %                flight track will be used in analysis with the 0-25%
+    %                and 75%-100% removed from the flight track.
+    %   sigRoll    : Maximum allowed roll standard deviations in the stable
+    %                segment. 
+    %   sigPitch   : Maximum allowed pitch standard deviations in the stable
+    %                segment.
     %   sigHeading : Maximum allowed heading standard deviations in the 
     %                stable segment.
-    %   Shift : Array of size Nx2 containing N potenital shifts in 
-    %           beginning and end percentages of the flight track in case
-    %           the flight track cropped by maxPer is unstable. Column 1
-    %           contains shifts in beginning flight track index and Column 2
-    %           contains shifts in end flight track index. 
-    %   t : Number of standard deviations of either roll, pitch, or heading
-    %       that constitute an abrupt change in attitude of the plane.
-    %   tcheck : Time interval between the jth roll/pitch/heading 
-    %            observation to check if there is an abrupt change in 
-    %            attitude shortly after the jth observation. Units: seconds
-    %   An : Cropped GPSTime station cell array containing the time (UTC),
-    %        track number, and image number.
+    %   Shift      : Array of size Nx2 containing N potenital shifts in 
+    %                beginning and end percentages of the flight track in case
+    %                the flight track cropped by maxPer is unstable. Column 1
+    %                contains shifts in beginning flight track index and Column 2
+    %                contains shifts in end flight track index. 
+    %   t          : Number of standard deviations of either roll, pitch, 
+    %                or heading that constitute an abrupt change in 
+    %                attitude of the plane.
+    %   tcheck     : Time interval between the jth roll/pitch/heading 
+    %                observation to check if there is an abrupt change in 
+    %                attitude shortly after the jth observation. 
+    %                Units: seconds
+    %   An         : Cropped GPSTime station cell array containing the time 
+    %                (UTC), track number, and image number.
     % 
     %   Returns
     %   -------
-    %   trackTag : Structure with two fields: 
+    %   trackTag   : Structure with three fields: 
     %               (1) stable: An identifier for whether the Track is 
     %                           stable or unstable based on the inputted
     %                           roll, pitch, and heading criteria. Here, we
@@ -52,7 +54,20 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,Shif
     %                                   0 -> Unstable
     %                                   1 -> Stable    
     %               (2) range: The start and end time indices of the stable
-    %                          flight track.  
+    %                          flight track. 
+    %               (3) stats: An array containing the statistics from the
+    %                          initial stability analysis using the maxPer 
+    %                          and shift parameters. The array has the
+    %                          following structure: 
+    %                                  [mean_r, std_r;... 
+    %                                   mean_p, std_p;...
+    %                                   mean_h, std_h; 
+    %                                   rmN(1), rmN(2)]
+    %                           where mean and standard deviations are
+    %                           computed over the interval: 
+    %                                   tracks(i).Indices(1)+rmN(1) to 
+    %                                   tracks(i).Indices(2)-rmN(2)
+    %                           
     %%%%
 
     % Loop through tracks
@@ -229,12 +244,17 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,Shif
             % Flight track is unstable -> range set to NaN 
             if trackTag(i).stable==0
                 trackTag(i).range=nan;
+                trackTag(i).stats=nan;
 
             % Flight track is stable -> set lower limit to maximum time 
             % index of minimum roll, pitch, and heading time indices (vice
-            % versa for upper limit)
+            % versa for upper limit) and save statistics
             else
                 trackTag(i).range=[max([minR,minP,minH]) min([maxR,maxP,maxH])];
+                trackTag(i).stats=[mean_r, std_r;... 
+                                   mean_p, std_p;...
+                                   mean_h, std_h; 
+                                   rmN(1), rmN(2)];
             end
         
         % If the start and end time indices for the ith track are empty, label the track as unstable 

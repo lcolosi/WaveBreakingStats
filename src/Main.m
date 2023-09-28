@@ -82,13 +82,14 @@ An = cropText(A);
 tracks = DefineTracks(An);
 
 % Convert from gps time in seconds of the week to UTC time
-%gps_time = str2num(cell2mat(An(:,1)));
-%utc_time = gpssw2utcdn(gps_time,StartDate);
+gps_time = str2num(cell2mat(An(:,1)));                                      %#ok<ST2NM> 
+utc_time = gpssw2utcdn(gps_time,StartDate);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Determine aircraft stability for each flight track 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
- 
+close all
+
 % Note: If flight track is NOT steady, Lambda of c distributions and 
 % whitecap coverage will not be computed.  
 
@@ -107,7 +108,7 @@ if option_plot
     sc = [sigRoll,sigPitch,sigHeading,Nstd];
 
     % Generate plots
-    plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc);
+    plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -1,7 +1,7 @@
-function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc)
+function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
 
     %%%%
-    % plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc)
+    % plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
     %
     % Plotting function which generates the following figures:  
     %   (1) The trajectory of all flight tracks on a lat-lon grid in movie
@@ -49,7 +49,9 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc)
     %              standard deviations (Nstd) for the roll, pitch, or heading
     %              that constitute an abrupt change in attitude of the plane. sc 
     %              has the following array structure  
-    %             sc = [sigRoll,sigPitch,sigHeading,Nstd];
+    %                     sc = [sigRoll,sigPitch,sigHeading,Nstd];
+    %   utc_time  : UTC time in a datenum array.    
+    %   StartDate : Start date string of flight in UTC in 'yyyymmdd' format. 
     % 
     %   Returns
     %   -------
@@ -174,6 +176,43 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc)
 
     % Save figure 
     print(gcf,'-dpng', [dirTS 'flight_trajectory.png'], '-r300');
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Plot time intervals associated with track 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    % Generate figure
+    figure('Name', 'Aircraft stability Time Intervals','WindowState','maximized');
+    set(gcf,'color',[1,1,1])
+
+    % Loop through tracks
+    for i=1:length(tracks)
+
+        % Check if time indicies for ith track are empty 
+        if ~isempty(tracks(i).Indices)
+            
+            % Obtain time indicies for ith flight track     
+            indicesFT = tracks(i).Indices(1):1:tracks(i).Indices(2);
+            indicesCT = trackTag(i).range(1):trackTag(i).range(2);
+
+            % Plot ith track time interval for full and stable flight
+            % periods
+            hold on
+                plot(indicesFT,utc_time(indicesFT),'.','Color',gray,'MarkerSize',8) 
+                plot(indicesCT,utc_time(indicesCT),'.','Color',cm(i,:),'MarkerSize',8)
+
+            % Label ith flight track
+            text(max(indicesFT-1100),max(utc_time(indicesFT)),num2str(i),'color','k','FontName',font,'fontsize',fontsize)
+        end
+    end
+
+    % Set figure attributes 
+    set(gca,'fontname',font,'FontSize',fontsize,'tickdir','both')
+    xlabel('Number of measurements','fontname',font,'FontSize',fontsize)
+    ylabel(['UTC time from ' StartDate(end-3:end-2) '/' StartDate(end-1:end) '/' StartDate(1:4) '(hrs)'],'fontname',font,'FontSize',fontsize)
+    datetick('y','HH','keeplimits')
+    box on
+    grid on
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% Plot aircraft stability for each track

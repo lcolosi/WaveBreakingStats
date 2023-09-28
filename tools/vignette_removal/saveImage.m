@@ -1,7 +1,7 @@
-function saveImage_test(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut)
+function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma)
 
     %%%%
-    % saveImage_test(dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirProcessed)
+    % saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma)
     %
     % Function for removing vingetting and equalizing images along a 
     % full flight track. Vignetting is removed using a flat field 
@@ -44,18 +44,11 @@ function saveImage_test(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut)
     %   tracks    : Structure containing the start and end time indices of
     %               each full flight track (located in the indices field).
     %               Indices derived from EO file.
-    %   meanIm    : Mean brightness of each pixel over the time period
-    %               of the stable flight track (temporal mean). Mean
-    %               brightness is smoothed using a 2D moving average.
-    %   stdIm     : Sample standard deviation of brightness for each
-    %               pixel over the time period of the stable flight 
-    %               (temporal std). Standard deviation of brightness
-    %               is smoothed using a 2D moving average.
     %   dirOut    : Path to directory for saving intermediate data products.
     %   sigma_ff  : Standard deviation of the Gaussian smoothing filter
     %               for the 2D image flate field correction and the 2D 
     %               Gaussian filtering of the squared deviations from the
-    %               mean of the flat field image.
+    %               mean of the flat field image. (originally 450)
     %   n_sigma   : Number of standard deviations above or below the 
     %               median image brightness. Parameter is used for 
     %               determining which pixels are considered for the 
@@ -68,9 +61,6 @@ function saveImage_test(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut)
     % 
     %%%%
 
-    % 
-    sigma_ff = 450;
-
     % Initialize parallel computing if parallel computing is not already
     % running
     if isempty(gcp('nocreate'))
@@ -82,11 +72,24 @@ function saveImage_test(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut)
         % Run code on parallel pools for increases efficiency
         poolobj = parpool(numCores);
 
+    else
+
+        % Initialize an empty poolobj
+        poolobj = [];
+
     end
 
+    % Generate waitbar
+    pos = [585 421.8750 270 56.2500];
+    f = waitbar(0,'Please wait...','Position', [pos(1) pos(2)+2*pos(4) pos(3) pos(4)]);
 
     % Loop through tracks 
-    for i=1:length(tracks)
+    for i=2 %1:length(tracks)
+
+
+        % Update waitbar
+        waitbar(i/length(tracks),f,...
+            {['Running saveImage.m : On track ' num2str(i) ' of ' num2str(length(tracks))]; [num2str(round((i/length(tracks))*100)) '$\%$ complete...']})
 
         % Check if track is stable and if full track has start and end time
         % indices
@@ -96,13 +99,19 @@ function saveImage_test(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut)
             beginDif=tracks_Im(i).Indices(1);                               %+trackTag(i).range(1)-tracks(i).Indices(1);
             endDif=tracks_Im(i).Indices(2);                                 %+trackTag(i).range(2)-tracks(i).Indices(2);
             
-            %  
+            % Create a subdirectory for image output after processing
             dirV=[dirOut 'Track_' num2str(i) '\'];
             if ~exist(dirV, 'dir'), mkdir(dirV); end
+
+            % Generate waitbar
+            pw = PoolWaitbar(endDif-beginDif, 'Removing vignetting and equalizing image.');
 
             % Loop through images
             parfor j=beginDif:endDif
                 
+                % Update waitbar
+                increment(pw)
+
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 %% Remove Vignetting 
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -16,3 +16,5 @@ src/*.asv
 tools/EO_file_processing/*.asv
 tools/aircraft_stability/*.asv
 tools/vignette_removal/*.asv
+tools/georeferencing/*.asv
+

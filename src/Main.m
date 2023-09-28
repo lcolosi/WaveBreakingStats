@@ -46,9 +46,9 @@ camName = 'flare';                                                          % Ca
 utmZone='10 N';                                                             % UTM zone for experiment
 
 % Brightness threshold parameters
-GlobalOrLocal=0; % Check if a global brightness threshold is defined for the area (1), or a local one for each image (0).
-localStep=3;%A range determining how many images are included into the analysis for local threshold (200 would indicate up to 100 images taken before or after the current one)
-peakPercentage=20;%what percentage of peak magnitude is taken as a breaking threshold (i.e. 10 would mean 10%)
+GlobalOrLocal=0;                                                            % Check if a global brightness threshold is defined for the area (1), or a local one for each image (0).
+localStep=3;                                                                % A range determining how many images are included into the analysis for local threshold (200 would indicate up to 100 images taken before or after the current one)
+peakPercentage=20;                                                          % what percentage of peak magnitude is taken as a breaking threshold (i.e. 10 would mean 10%)
 
 % Set text interpreter
 set_interpreter('latex')

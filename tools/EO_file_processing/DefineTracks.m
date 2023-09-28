@@ -51,3 +51,5 @@ function tracks = DefineTracks(An)
         % Save start and end time indicies in tracks structure
         tracks(i).Indices=[startI endI];
     end
+
+end

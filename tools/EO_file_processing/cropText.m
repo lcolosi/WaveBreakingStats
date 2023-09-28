@@ -40,3 +40,5 @@ function An=cropText(A)
     
     % Crop GPSTime Station data
     An=A.textdata(Counter:end,:);
+
+end

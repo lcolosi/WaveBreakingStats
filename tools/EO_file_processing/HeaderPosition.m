@@ -46,3 +46,5 @@ function Counter=HeaderPosition(EOpath,String)
 
     % Close file when first line with data is reached     
     fclose(fid);
+
+end

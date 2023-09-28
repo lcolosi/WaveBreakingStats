@@ -74,3 +74,5 @@ function date1 = gps2utc(date0)
     
     % Reshape Output Array
     date1 = reshape(date1,sz);
+
+end

@@ -357,6 +357,7 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc)
             print(gcf,'-dpng', [dirTS 'Stability_analysis-track' num2str(i) '.png'], '-r200'); 
         end
     end
+end
 
     %% Development Code
     

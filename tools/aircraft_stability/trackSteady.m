@@ -262,3 +262,4 @@ function trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,Shif
             trackTag(i).stable=0;
         end
     end
+end

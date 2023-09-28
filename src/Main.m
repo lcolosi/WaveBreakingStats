@@ -11,6 +11,11 @@ clc, clearvars, close all
 %------- This is the only section of code you will need to change --------%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% Select process to run (0 or 1)
+option_plot          = 1;                                                   % Plot verification figures
+option_image_proc    = 1;                                                   % Process raw images and generate intermediate data products (unnecessary if these intermediate products are already generated and you just want to work lambda of c distribution code)
+option_globalOrlocal = 1;                                                   % 
+
 % Start date of flight in UTC
 StartDate = '20210519';                                                     % Time format: 'yyyymmdd'
 
@@ -30,11 +35,20 @@ Nstd = 4;                                                                   % Nu
 tCheck = 7;                                                                 % Time interval between the jth roll/pitch/heading observation to check if their is an abrupt change in attitude shortly after the jth observation.
 
 % Vignette removal parameters
-winSize = 7;
+winSize = 7;                                                                % Side length of the square kernel used in the 2D moving average for smoothing (low pass filtering) mean brightness of each pixel over the track period. 
+sigma_ff = 300;                                                             % Standard deviation of the Gaussian smoothing filter for the 2D image flate field correction. 
+B_threshold = 0.8;                                                          % Fraction of the pixels that are considered in the mean pixel brightness calculation.
+n_sigma = 5;                                                                % Number of standard deviations above or below the median image brightness. Parameter is used for determining which pixels are considered for the calculation of the mean image brightness.
+stdMag=-0.1;
 
-% Select process to run (0 or 1)
-option_plot       = 1;                                                      % Plot verification figures
-option_image_proc = 1;                                                      % Process raw images and generate intermediate data products (unnecessary if these intermediate products are already generated and you just want to work lambda of c distribution code)
+% Trimble georeferencing project parameters 
+camName = 'flare';                                                          % Camera name
+utmZone='10 N';                                                             % UTM zone for experiment
+
+% Brightness threshold parameters
+GlobalOrLocal=0; % Check if a global brightness threshold is defined for the area (1), or a local one for each image (0).
+localStep=3;%A range determining how many images are included into the analysis for local threshold (200 would indicate up to 100 images taken before or after the current one)
+peakPercentage=20;%what percentage of peak magnitude is taken as a breaking threshold (i.e. 10 would mean 10%)
 
 % Set text interpreter
 set_interpreter('latex')
@@ -83,7 +97,7 @@ trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,Shift,Nstd,tC
 
 % Plot headings in flight tracks, with all other data (used portion of 
 % the track, whether is it labeled as steady or not).
-if option_plot == 1
+if option_plot 
 
     % Create a subdirectory for flight trajectory and stability plots
     dirTS = [dirV 'Flight_Trajectories_And_Stability\'];
@@ -99,6 +113,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Remove vignetting and crop out high glint 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+clc
 
 % Obtain the filenames of the non-georeferenced video images 
 D_Im=dir([dirRaw '*.tif']);
@@ -106,140 +121,170 @@ D_Im=dir([dirRaw '*.tif']);
 % Define tracks in images
 tracks_Im = DefineTracksIm(D_Im,tracks);
 
-% Preform image processing 
-if option_image_proc == 1
+% Preform image processing of raw non-georeference images
+if option_image_proc
+
+    % Create a subdirectory for intermediate image products
+    dirVR=[dirOut 'nongeoreferenced_images_with_Vignetting_Removed\'];
+    if ~exist(dirVR, 'dir'), mkdir(dirVR); end
+    dirMGlint=[dirOut 'mask_for_Determining_High_Glint_Areas\'];
+    if ~exist(dirMGlint, 'dir'), mkdir(dirMGlint); end
 
     % Compute the mean brightness and standard deviation of each track
-    [meanIm,stdIm,RM_Nr,meanOriginal]=getImMeanStd(dirRaw,D_Im,tracks_Im,trackTag,tracks,winSize,dirProc);
+    [meanIm,stdIm,RM_Nr,meanOriginal]=getImMeanStd(dirRaw,D_Im,tracks_Im,trackTag,tracks,winSize,sigma_ff,B_threshold,n_sigma);
     
     % Save output from getImMeanStd 
-    save([dirout 'mean_Images_Per_Track.mat'],'meanIm','stdIm','RM_Nr','meanOriginal');
+    save([dirOut 'mean_Images_Per_Track.mat'],'meanIm','stdIm','RM_Nr','meanOriginal');
     
+    % Remove vignetting and equalize raw nongeoreferenced image; save 
+    % intermediate products to dirVR
+    sigma_ff = 450;
+    saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirVR,sigma_ff,n_sigma);
     
-    % Next, the raw images are processed (std and mean brightness are
-    % equalized), and are saved to the Output folder (dirout\Output).
-    
-    
-    % Export images with vignetting removed
-    % dirProcessed='\\Airseaserver28\d\MASS\RAW\LCDRI_2017\VIDEO\TIFF_16BIT_EXPORT_Corrected\20170323\';
-    dirProcessed=[dirProc 'nongeoreferenced_Images_With_Vignetting_Removed_V2\'];
-    if ~exist(dirProcessed, 'dir'), mkdir(dirProcessed); end
-    mina2=saveImage_test(dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirProcessed);
-    
-    %Save mask images
-    dirProcessed=[dirProc 'mask_For_Determining_High_Glint_Areas_V2\'];
-    if ~exist(dirProcessed, 'dir'), mkdir(dirProcessed); end
-    mina2=saveImageMask(dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirProcessed);
+    % Save image masks for detecting high glint areas; save 
+    % intermediate products to dirMGlint
+    saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirMGlint);
     
     % Eliminate areas with high glint. Std mag determines the number of
     % standard deviations for categorizing high glint areas.
-    stdMag=-0.1;
     [Glint,Glint_mask]=det_glint(meanIm,stdMag,tracks,trackTag);
-    
-    dirV=[dirProc 'Quality_Control\Vignetting\'];
-    if ~exist(dirV, 'dir'), mkdir(dirV); end
-    % Finally, the original and processed images are plotted out for
-    % comparison. The mean image and mean std are also plotted out. 
-    plotProcessedImages(dirV,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,Glint);
-
 end
 
-%% Build and execute .bat file for georeferencing processed images
+% Plot 
+if option_plot
 
+    % Create a subdirectory for vignette removal plots
+    dirVn=[dirV 'Vignetting\'];
+    if ~exist(dirVn, 'dir'), mkdir(dirVn); end
 
-% Split the EO files into individual tracks (think file organization is
-% better this way).
+    % Generate plots 
+    plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,Glint);
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Build and execute .bat file for georeferencing raw processed images with Trimble 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+
+% Split the EO files into individual tracks 
 cleanEOfile(EOpath,EOdir,tracks,D);
 
-% A matlab script which builds .bat file for georeferencing images is
-% called. 
-camName = 'flare'; %current camera options are 'jai', 'flare', 'sc6000', 'sc6700', 'd810', 'doppvis'
-utmZone='10 N';
-%% !!!!!!!!!!!!!!!!!!!!!!!!!! added 10 to resolution
-for i=11:12%1:length(tracks)
+%--- Build .bat file for the image ---%
+
+% Loop through tracks
+for i=1:length(tracks)
+
+    % Check if track is stable
     if trackTag(i).stable==1
-        xx=nanmean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),1));
-        yy=nanmean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),2));
+
+        % Compute mean northing and easting UTM coordinate of ith track and
+        % convert it to decimal degree longitude and latitude
+        xx=mean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),1),'omitnan');
+        yy=mean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),2),'omitnan');
         [proj_lat,proj_lon]=utm2deg(xx,yy,utmZone);
         
+        % Set the paths to nongeoreferenced images to be processed and 
+        % output directory for georeferenced images 
         dirin_img = [dirProc 'nongeoreferenced_Images_With_Vignetting_Removed_V2\Track_' num2str(i) '\']; %directory of all tif imagery to use for this single flight
         dirin_prj = dirProc;
         
+        % Build .bat file for running trimble georeferencing project 
         buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,i,camName);
     end
 end
 
-% Build .bat file for the mask
-for i=11:12%1:length(tracks)
+%--- Build .bat file for the mask ---%
+
+% Loop through tracks 
+for i=1:length(tracks)
+
+    % Check if track is stable
     if trackTag(i).stable==1
-        xx=nanmean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),1));
-        yy=nanmean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),2));
+        
+        % Compute mean northing and easting UTM coordinate of ith track and
+        % convert it to decimal degree longitude and latitude
+        xx=mean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),1),'omitnan');
+        yy=mean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),2),'omitnan');
         [proj_lat,proj_lon]=utm2deg(xx,yy,utmZone);
         
+        % Set the paths to masks for determing high glint and output
+        % directory for georeferenced masks
         dirin_img = [dirProc 'mask_For_Determining_High_Glint_Areas\Track_' num2str(i) '\']; %directory of all tif imagery to use for this single flight
         dirin_prj = dirProc;
         
+        % Build .bat file for running trimble georeferencing project
         buildBatMask(dirin_img,dirin_prj,proj_lat,proj_lon,i,camName);
     end
 end
 
-% Execute .bat files
-for i=11:12%1:length(tracks)
+%--- Execute .bat files ---%
+
+% Loop through tracks 
+for i=1:length(tracks)
+    
+    % Check if track is stable 
     if trackTag(i).stable==1
+        
+        % Obtain file name of .bat file  
         fileNN=dir([dirProc 'Project\Track_' num2str(i) '\' '*.bat']);
+        
+        % Execute .bat file for trimble georeferencing image project
         system([dirProc 'Project\Track_' num2str(i) '\' fileNN.name]);
-%         while ~exist([dirout 'Output\Track_' num2str(i) '\blank.txt'])
-%            pause(300);
-%            fprintf('ne')
-%         end
-        pause(150);
+
     end
 end
 
-for i=11:12%1:length(tracks)
+% Loop through tracks
+for i=1:length(tracks)
+    
+    % Check if track is stable 
     if trackTag(i).stable==1
+        
+        % Obtain file name of .bat file
         fileNN=dir([dirProc 'Project\TrackMask_' num2str(i) '\' '*.bat']);
+        
+        % Execute .bat file for trimble georeferencing mask project
         system([dirProc 'Project\TrackMask_' num2str(i) '\' fileNN.name]);
-%         while ~exist([dirout 'Output\TrackMask_' num2str(i) '\blank.txt'])
-%            pause(300);
-%            fprintf('ne')
-%         end
-        pause(150);
+
     end
 end
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Determine brightness threshold for each track
-GlobalOrLocal=0; % Check if a global brightness threshold is defined for the area (1), or a local one for each image (0).
-arrayHist=0:16:256*256;% For 16bit
-dirProcessed=[dirProc 'Output\'];
-localStep=3;%A range determining how many images are included into the analysis for local threshold (200 would indicate up to 100 images taken before or after the current one)
-peakPercentage=20;%what percentage of peak magnitude is taken as a breaking threshold (i.e. 10 would mean 10%)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-if GlobalOrLocal==1
+% Set pixel value range for 16 bit images
+arrayHist=0:16:256*256;
+
+% Set directory to save brightness threshold
+dirProcessed=[dirProc 'Output\'];
+
+% 
+if option_globalOrlocal == 1
     [Threshold,N]=global_Thresh(peakPercentage,dirProcessed,D_Im,tracks_Im,trackTag,tracks,arrayHist,meanIm,RM_Nr,Glint,Glint_mask);
-elseif GlobalOrLocal==0
+else 
     [Threshold,N]=local_Thresh(peakPercentage,dirProcessed,D_Im,tracks_Im,trackTag,tracks,arrayHist,meanIm,RM_Nr,Glint,Glint_mask,localStep);
 end
 
-for i=11:12
+% Loop through tracks
+for i=1:length(tracks)
     N2=mean(N(i).hi);
     N_CS=cumsum(N2(200:500));
-    N_CS=N_CS/nanmax(N_CS);
+    N_CS=N_CS/max(N_CS,[],'omitnan');
     N_CS=1-N_CS;
     ind1=find(N_CS<0.5,1,'first');
     [res_x, idx_of_result]=knee_pt(N_CS(ind1:301),ind1:301);
-    Threshold(i).th(:)=10000%(199+ind1+idx_of_result)*16;
+    Threshold(i).th(:)=10000;                                               %(199+ind1+idx_of_result)*16;
 end
 
-for i=11:12
+% Loop through tracks
+for i=1:length(tracks)
     for j=1:length(N(i).hi(:,1))
         if N(i).hi(j,1)==0
             Threshold(i).th(j)=0;
         else
             N2=(N(i).hi(j,:));
             N_CS=cumsum(N2(200:500));
-            N_CS=N_CS/nanmax(N_CS);
+            N_CS=N_CS/max(N_CS,[],'omitnan');
             N_CS=1-N_CS;
             ind1=find(N_CS<0.5,1,'first');
             [res_x, idx_of_result]=knee_pt(N_CS(ind1:301),ind1:301);
@@ -249,25 +294,34 @@ for i=11:12
     end
 end
 
-if GlobalOrLocal==1
+% 
+if option_globalOrlocal == 1
     dirV=[dirProc 'Saved_Matlab_Data\'];
     if ~exist(dirV, 'dir'), mkdir(dirV); end
     save([dirV 'thresh_global.mat'],'Threshold','N');
-elseif GlobalOrLocal==0
+else 
     Threshold=denoiseThreshold(Threshold,tracks,trackTag);
     dirV=[dirProc 'Saved_Matlab_Data\'];
     if ~exist(dirV, 'dir'), mkdir(dirV); end
     save([dirV 'thresh_local_NewMethod.mat'],'Threshold','N');
 end
-% plot out graphs for determining threshold, and give some examples
-dirV=[dirProc 'Quality_Control\Brightness_Threshold_New\'];
-if ~exist(dirV, 'dir'), mkdir(dirV); end
-plot_Thresh(Threshold,N,dirProcessed,dirV,D_Im,tracks_Im,trackTag,tracks,arrayHist,Glint,Glint_mask,meanIm,GlobalOrLocal);
 
-%% temp code for thresholding
+% Plot 
+if option_plot
 
+    % Create a subdirectory for vignette removal plots
+    dirBT=[dirV 'Quality_Control\Brightness_Threshold_New\'];
+    if ~exist(dirBT, 'dir'), mkdir(dirBT); end
 
+    % Generate plots
+    plot_Thresh(Threshold,N,dirProcessed,dirV,D_Im,tracks_Im,trackTag,tracks,arrayHist,Glint,Glint_mask,meanIm,GlobalOrLocal);
+
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Start running the code for determining Lambda and wc coverage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %new - 0 
 %new2 - 10
 %new3 - 5

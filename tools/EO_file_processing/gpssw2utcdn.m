@@ -6,13 +6,13 @@ function utc_time = gpssw2utcdn(gps_time,date)
     % Function for converting GPS time in seconds of the week to UTC datenum.
     % Here, weeks since 0 hours (midnight) Sunday 6 January 1980 are not
     % included as an input so the starting date in UTC must be provided as 
-    % an input. Note that seconds of the week reset to zero on 0 hours
+    % an argument. Note that seconds of the week reset to zero on 0 hours
     % (midnight) Sunday. 
     %
     %   Parameters
     %   ----------
     %   gps_time : GPS time array in seconds of the week. 
-    %   date     : UTC starting date of gps time. 
+    %   date     : UTC starting date for gps time. 
     %
     %   Returns
     %   -------

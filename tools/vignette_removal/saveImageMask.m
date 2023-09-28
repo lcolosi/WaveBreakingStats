@@ -1,14 +1,12 @@
-function saveImageMask(dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirOut)
+function saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirOut)
     
     %%%%
-    % saveImageMask(dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirOut)
+    % saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirOut)
     %
     % Function for  
     %
     %   Parameters
     %   ---------- 
-    %   dirRaw    : Path to raw (non-georeferenced) video images for a
-    %               given flight.
     %   D_Im      : Filenames of the raw (non-georeferenced) video images.       
     %   tracks_Im : Structure containing the start and end time indices of
     %               each full flight track (located in the indices field). 
@@ -46,58 +44,84 @@ function saveImageMask(dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirOut
     %               (temporal std). Standard deviation of brightness
     %               is smoothed using a 2D moving average.
     %   dirOut    : Path to directory for saving intermediate data products.
-    %   sigma_ff  : Standard deviation of the Gaussian smoothing filter
-    %               for the 2D image flate field correction and the 2D 
-    %               Gaussian filtering of the squared deviations from the
-    %               mean of the flat field image.
-    %   n_sigma   : Number of standard deviations above or below the 
-    %               median image brightness. Parameter is used for 
-    %               determining which pixels are considered for the 
-    %               calculation of the mean image brightness. 
     % 
     %   Returns
     %   -------
-    %   Saves the equalized images in the directory specified by dirOut. 
+    %   Saves the image masks in the directory specified by dirOut. 
     %  
     % 
     %%%%
 
-    % This function crops out the areas with strong glint, removes vigneting,
-    % and saves the processed images to dirProcessed folder.
-    % Input: 
-    % 
+    % Initialize parallel computing if parallel computing is not already
+    % running
+    if isempty(gcp('nocreate'))
 
-    numCores=8;
-    poolobj = parpool(numCores);
-    for i=14:17%10:4:14%1:length(tracks)
-        if (trackTag(i).stable==1) & (~isempty(tracks(i).Indices))
+        % Set the number of CPU cores (i.e., the brains of the CPU that recieve
+        % and execute operations for your computer) 
+        numCores=8;
+    
+        % Run code on parallel pools for increases efficiency
+        poolobj = parpool(numCores);
+
+    else 
+
+        % Initialize an empty poolobj
+        poolobj = [];
+    
+    end
+
+    % Loop through tracks
+    for i=2 %1:length(tracks)
+
+        % Check if track is stable and if full track has start and end time
+        % indices
+        if (trackTag(i).stable==1) && (~isempty(tracks(i).Indices))
+
+            % Set nans in mean and standard deviation images to zero
             meanIm(i).im(isnan(meanIm(i).im))=0;
             stdIm(i).im(isnan(stdIm(i).im))=0;
             
-            beginDif=tracks_Im(i).Indices(1);%+trackTag(i).range(1)-tracks(i).Indices(1);
-            endDif=tracks_Im(i).Indices(2);%+trackTag(i).range(2)-tracks(i).Indices(2);
-            medianIm=median(meanIm(i).im(:));
-            medianStd=median(stdIm(i).im(:));
+            % Set beginning and end time indices for full flight track 
+            beginDif=tracks_Im(i).Indices(1);                               %+trackTag(i).range(1)-tracks(i).Indices(1);
+            endDif=tracks_Im(i).Indices(2);                                 %+trackTag(i).range(2)-tracks(i).Indices(2);
             
+            % Create a subdirectory for image mask output after processing
             dirV=[dirOut 'Track_' num2str(i) '\'];
-    %         dirV=[dirProcessed 'Test\'];
             if ~exist(dirV, 'dir'), mkdir(dirV); end
+
+            % Loop through images 
             parfor j=beginDif:endDif
-    %             a=imread([dirRaw D_Im(j).name]);
-    %             a=double(im2gray(a));
-    %             
-    %             a2=a-meanIm(i).im+medianIm;
-    %             a2=nanmean(a2(:))+(a2-nanmean(a2(:)))./stdIm(i).im*medianStd;
-                %mina2(j+1-beginDif)=min(a2(:));
-                % Shift by 5000 to eliminate any potential zeros.
-                a2=uint16(meanIm(i).im/nanmax(meanIm(i).im(:))*256*256);
                 
-                imwrite(a2,[dirV D_Im(j).name]);
+                % Normalize mean image by its maximum value and convert to
+                % array elements to 16 bit unsigned integers  
+                a2=uint16(meanIm(i).im/max(meanIm(i).im(:))*256*256);
+                
+                % Write processed image mask
+                imwrite(a2,[dirV D_Im(j).name(1:end-4) '_Mask.tif']);
                 
             end
         end
     end
-    mina2=1;
+    
+    % End parallel computing session
     delete(poolobj)
 
 end
+
+%% Developmental Code
+% This function crops out the areas with strong glint, removes vigneting,
+% and saves the processed images to dirProcessed folder.
+% Input: 
+% 
+
+%             % Compute the median mean and standard deviation values
+%             medianIm=median(meanIm(i).im(:));
+%             medianStd=median(stdIm(i).im(:));
+
+%             a=imread([dirRaw D_Im(j).name]);
+%             a=double(im2gray(a));
+%             
+%             a2=a-meanIm(i).im+medianIm;
+%             a2=nanmean(a2(:))+(a2-nanmean(a2(:)))./stdIm(i).im*medianStd;
+%mina2(j+1-beginDif)=min(a2(:));
+% Shift by 5000 to eliminate any potential zeros.

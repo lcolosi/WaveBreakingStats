@@ -88,7 +88,6 @@ utc_time = gpssw2utcdn(gps_time,StartDate);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Determine aircraft stability for each flight track 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-close all
 
 % Note: If flight track is NOT steady, Lambda of c distributions and 
 % whitecap coverage will not be computed.  
@@ -114,7 +113,6 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Remove vignetting and crop out high glint 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-clc
 
 % Obtain the filenames of the non-georeferenced video images 
 D_Im=dir([dirRaw '*.tif']);

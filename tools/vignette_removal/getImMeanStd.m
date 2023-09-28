@@ -1,14 +1,11 @@
-function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,trackTag,tracks,winSize,dirout)
+function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,trackTag,tracks,winSize,sigma_ff,B_threshold,n_sigma)
 
     %%%%
-    % [meanIm,stdIm,RM_Nr,meanOriginal]=getImMeanStd(dirRaw,D_Im,tracks_Im,trackTag,tracks,winSize,dirout)
+    % [meanIm,stdIm,RM_Nr,meanOriginal]=getImMeanStd(dirRaw,D_Im,tracks_Im,trackTag,tracks,winSize,sigma_ff,B_threshold,n_sigma)
     %
-    % Function for  
-    % 
-    % First we obtain the mean of the image and of std for each track. This is
-    % computed for the stable portion of the tracks, as indicated in trackTag
-    % variable.
-    % 
+    % Function for computing the mean and standard deviation of each pixel
+    % for each track during the stable periods. Additionally outliers are 
+    % identified in the mean image. 
     %
     %   Parameters
     %   ----------
@@ -43,53 +40,90 @@ function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,
     %   tracks    : Structure containing the start and end time indices of
     %               each full flight track (located in the indices field).
     %               Indices derived from EO file.
-    %   winSize   : 
-    %   dirout    : 
+    %   winSize   : Window or Kernel size for 2D move average. Window is
+    %               square so winSize is a scale quantity representing the
+    %               side length of the square window.  
+    %   sigma_ff    : Standard deviation of the Gaussian smoothing filter
+    %                 for the 2D image flate field correction. 
+    %   B_threshold : Fraction of the pixels (sorted in ascending 
+    %                 numerical order according to brightness) that are 
+    %                 considered in the mean pixel brightness calculation. 
+    %                 For example, if per_thresh = 0.8, then the top 20% of
+    %                 pixel values are excluded from the mean pixel
+    %                 calculation.
+    %   n_sigma     : Number of standard deviations above or below the 
+    %                 median image brightness. Parameter is used for 
+    %                 determining which pixels are considered for the 
+    %                 calculation of the mean image brightness.
     % 
     %   Returns
     %   -------
-    %   meanIm       : 
-    %   stdIm        : 
-    %   RM_Nr        :
-    %   meanOriginal : 
+    %   meanIm       : Structure of mean brightness of each pixel over
+    %                  the time period of the stable flight track 
+    %                  (temporal mean). Mean
+    %                  brightness is smoothed using a 2D moving average. 
+    %   stdIm        : Sample standard deviation of brightness for each
+    %                  pixel over the time period of the stable flight 
+    %                  (temporal std). Standard deviation of brightness
+    %                  is smoothed using a 2D moving average.  
+    %   RM_Nr        : A logical array indicating the images whose lighting is
+    %                  significantly higher or lower than the median 
+    %                  brightness of all images (i.e. the outliers). 
+    %                  Significance deviation from the median is defined as 
+    %                  more than three scaled median absolute deviations 
+    %                  from the median  This is the quantity that identifies 
+    %                  significant variations in an image's lighting.
+    %   meanOriginal : Mean brightness over all pixels for each image 
+    %                  (spatial average). Here, the mean of the all pixels
+    %                  below the brightness threshold set by B_threshold of
+    %                  each image is computed. This is computed to check
+    %                  for significant variations in image lighting. 
+    %  
+    %   Notes
+    %   -----
+    %   This functions requires the Parallel computing toolbox to access the
+    %   parpool function. This is only accessible through the air-sea lab's
+    %   matlab account.   
     % 
-    % 
-    % The RM_Nr and meanOriginal variables check for significant variations in
-    % image lighting. RM_Nr represents image numbers to be removed, and
-    % meanOriginal is the mean lighting in every image
-    % 
-    % This functions requires the Parallel computing toolbox to access the
-    % parpool function.  
-    % 
-    % Version: 5.0 from Teodor's Codes for Lambda in TFO_2021 directory in 
-    % airseaserver28 
+    %   Version: 5.0 from Teodor's Codes for Lambda in TFO_2021 directory in 
+    %   airseaserver28 
     % 
     %%%%
+    
+    % Initialize parallel computing if parallel computing is not already
+    % running
+    if isempty(gcp('nocreate'))
 
-    % Set the number of CPU cores (i.e., the brains of the CPU that recieve
-    % and execute operations for your computer) 
-    %numCores=6;
+        % Set the number of CPU cores (i.e., the brains of the CPU that recieve
+        % and execute operations for your computer) 
+        numCores=6;
+    
+        % Run code on parallel pools for increases efficiency
+        poolobj = parpool(numCores);
 
-    % Run code on parallel pools for increases efficiency
-    %poolobj = parpool(numCores);
+    else 
 
-    % Add utilities directory to the top of the current working directory 
-    %addpath('utilities');
+        % Initialize an empty poolobj
+        poolobj = [];
+
+    end
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% Compute mean brightness for every pixel on the track
+    %% Compute mean and std of brightness for each pixel over stable track period
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     % Note: This is only done if a tracks is identified as stable
 
-    % Loop through tracks 
-    for i=1:length(tracks_Im)
+    % Generate waitbar
+    pos = [585 421.8750 270 56.2500];
+    f = waitbar(0,'Please wait...','Position', [pos(1) pos(2)+2*pos(4) pos(3) pos(4)]);
 
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %% Remove vignetting
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        % Remove vignetting, cut sunglint using the previous iteration,
-        % determine brightness threshold for breaking.
+    % Loop through tracks 
+    for i=2 %1:length(tracks_Im)
+
+        % Update waitbar
+        waitbar(i/length(tracks_Im),f,...
+            {['Running getImMeanStd.m : On track ' num2str(i) ' of ' num2str(length(tracks_Im))]; [num2str(round((i/length(tracks_Im))*100)) '$\%$ complete...']})
 
         % Check if track is stable 
         if trackTag(i).stable==1
@@ -97,32 +131,11 @@ function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,
             % Set beginning and end indices for stable flight period 
             beginDif=tracks_Im(i).Indices(1)+trackTag(i).range(1)-tracks(i).Indices(1);
             endDif=tracks_Im(i).Indices(2)+trackTag(i).range(2)-tracks(i).Indices(2);
-            
-            %--- Check image format (8 or 16 bit) using first image file---%
 
-            % Load first raw image from ith track's stable period
-            a=imread([dirRaw D_Im(beginDif).name]);
+            % Compute the mean and standard deviation of the image plus identify outliers       
+            [meanOriginal(i).nr,RM_Nr(i).nr,meanIm(i).im,stdIm(i).im]=determineMeanStd(beginDif,endDif,dirRaw,D_Im,sigma_ff,B_threshold,n_sigma);
             
-            % Set pixel value range for 8 and 16 bit images
-            if isa(a,'uint16')
-                arrayHist=0:16:256*256;
-            elseif isa(a,'uint8')
-                arrayHist=0:256;
-            else
-                % Print warning for unknown image format
-                fprintf('Unknown image format. Only 8 or 16 bit images are recognized');
-            end
-
-            % 
-            [meanIM,stdIM,meanOriginal(i).nr]=detsPar(beginDif,endDif,dirRaw,D_Im);
-            [tempp,RM_Nr(i).nr]=rmoutliers(meanOriginal(i).nr(beginDif:endDif));
-            [N,Threshold]=detsPar2(beginDif,endDif,dirRaw,D_Im,meanIM,stdIM,arrayHist,RM_Nr(i).nr);
-            
-            
-            [meanIm(i).im,stdIm(i).im]=detsPar3(beginDif,endDif,dirRaw,D_Im,meanIM,stdIM,arrayHist,Threshold,RM_Nr(i).nr);
-            
-            [meanOriginal(i).nr,RM_Nr(i).nr,meanIm(i).im,stdIm(i).im]=determineMeanStd(beginDif,endDif,dirRaw,D_Im,arrayHist);
-            
+            % Compute the 2D moving average of the mean and standard deviation of brightness 
             meanIm(i).im=mean2D(meanIm(i).im,winSize);
             stdIm(i).im=mean2D(stdIm(i).im,winSize);
         
@@ -133,24 +146,11 @@ function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,
             stdIm(i).im=[];
         end
     end
+
+    % Close waitbar
+    close(f)
     
     % End parallel computing session
     delete(poolobj)
-    return
 
-%% Development Code
-% This variable tracks if image format is recognised (8 or 16 bit)
-% Err=0;
-%     if Err==1
-%         break
-%     end
-% 
-
-%     else
-%         fprintf('Unknown image format. 8/16 bit are recognized');
-%         Err=1;
-%         %break
-%     end
-
-% Convert RGB image to grayscale and pixel values to double
-% a=double(im2gray(a));
+end

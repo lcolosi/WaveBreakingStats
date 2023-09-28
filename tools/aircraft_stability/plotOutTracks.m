@@ -5,11 +5,13 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
     %
     % Plotting function which generates the following figures:  
     %   (1) The trajectory of all flight tracks on a lat-lon grid in movie
-    %       and regular figure formats.   
+    %       and regular figure formats. 
+    %   (3) The time intervals in UTC time of each track and its stable
+    %       flight period. 
     %   (2) The individual flight trajectories with the time series of 
     %       roll, pitch, and heading.  
-    % In addition, the second figure's title indicates whether the track 
-    % is stable or not.
+    % In addition, the titles of the third set of figures indicate whether
+    % the track is stable or not.
     %
     %   Parameters
     %   ----------
@@ -55,20 +57,12 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
     % 
     %   Returns
     %   -------
-    %   The three figures are saved to the dirTS directory.  
+    %   All figures are saved to the dirTS directory.  
     % 
     %   Notes
     %   -----
     %   This functions requires the mapping toolbox to access projinv and
-    %   geotiffinto functions. 
-    % 
-    %   Questions
-    %   ---------
-    %   Ask Nick about how to convert to GPS time and why there are weird
-    %   features in the gps time variable. The method for deriving the time
-    %   variable assumes that the data is collected at a regular interval,
-    %   but there are definitely gaps in the time series which can cause
-    %   the data to appear more spiky than it actually is. 
+    %   geotiffinto functions.  
     %
     %%%%
     
@@ -213,6 +207,9 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
     datetick('y','HH','keeplimits')
     box on
     grid on
+
+    % Save figure 
+    print(gcf,'-dpng', [dirTS 'Stable_flight_periods.png'], '-r300');
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% Plot aircraft stability for each track

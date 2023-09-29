@@ -58,10 +58,10 @@ function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,
     % 
     %   Returns
     %   -------
-    %   meanIm       : Structure of mean brightness of each pixel over
+    %   meanIm       : Mean brightness of each pixel over
     %                  the time period of the stable flight track 
-    %                  (temporal mean). Mean
-    %                  brightness is smoothed using a 2D moving average. 
+    %                  (temporal mean). Mean brightness is smoothed using
+    %                  a 2D moving average. 
     %   stdIm        : Sample standard deviation of brightness for each
     %                  pixel over the time period of the stable flight 
     %                  (temporal std). Standard deviation of brightness

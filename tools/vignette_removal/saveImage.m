@@ -1,7 +1,7 @@
-function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma)
+function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma,meanIm,stdIm,meanOriginal,sigBrightness)
 
     %%%%
-    % saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma)
+    % saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma,meanIm,stdIm,meanOriginal,sigBrightness)
     %
     % Function for removing vingetting and equalizing images along a 
     % full flight track. Vignetting is removed using a flat field 
@@ -52,7 +52,25 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma
     %   n_sigma   : Number of standard deviations above or below the 
     %               median image brightness. Parameter is used for 
     %               determining which pixels are considered for the 
-    %               calculation of the mean image brightness. 
+    %               calculation of the mean image brightness.
+    %   meanIm    : Mean brightness of each pixel over the time period
+    %               of the stable flight track (temporal mean). Mean
+    %               brightness is smoothed using a 2D moving average.
+    %   stdIm     : Sample standard deviation of brightness for each
+    %               pixel over the time period of the stable flight 
+    %               (temporal std). Standard deviation of brightness
+    %               is smoothed using a 2D moving average.
+    %   meanOriginal  : Mean brightness over all pixels for each image 
+    %                   (spatial average). Here, the mean of the all pixels
+    %                   below the brightness threshold set by B_threshold of
+    %                   each image is computed. This is computed to check
+    %                   for significant variations in image lighting. 
+    %   sigBrightness : Maximum allowed standard deviation of meanOriginal 
+    %                   to constitute constant brightness along the track. 
+    %                   For tracks with std(meanOriginal) >= sigBrightness, 
+    %                   the variable lighting algorithm for removing
+    %                   vignetting/equalizing image is used. Otherwise, the
+    %                   constant lighting algorithm is used. 
     % 
     %   Returns
     %   -------
@@ -84,8 +102,7 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma
     f = waitbar(0,'Please wait...','Position', [pos(1) pos(2)+2*pos(4) pos(3) pos(4)]);
 
     % Loop through tracks 
-    for i=2 %1:length(tracks)
-
+    for i=1 %1:length(tracks)
 
         % Update waitbar
         waitbar(i/length(tracks),f,...
@@ -96,8 +113,21 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma
         if (trackTag(i).stable==1) && (~isempty(tracks(i).Indices))
 
             % Set beginning and end time indices for full flight track
-            beginDif=tracks_Im(i).Indices(1);                               %+trackTag(i).range(1)-tracks(i).Indices(1);
-            endDif=tracks_Im(i).Indices(2);                                 %+trackTag(i).range(2)-tracks(i).Indices(2);
+            beginDif=tracks_Im(i).Indices(1);                              
+            endDif=tracks_Im(i).Indices(2);
+
+            % Set the mean and standard deviation pixel images to avoid 
+            % high data communication overhead in parfor loop 
+            meanIm_temp = meanIm(i).im;
+            stdIm_temp = stdIm(i).im;
+
+            % Set nans in mean and standard deviation images to zero
+            meanIm_temp(isnan(meanIm_temp))=0;
+            stdIm_temp(isnan(stdIm_temp))=0;
+            
+            % Compute the median mean and standard deviation values
+            medianIm=median(meanIm_temp(:));
+            medianStd=median(stdIm_temp(:));
             
             % Create a subdirectory for image output after processing
             dirV=[dirOut 'Track_' num2str(i) '\'];
@@ -113,7 +143,7 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma
                 increment(pw)
 
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                %% Remove Vignetting 
+                %% Remove Vignetting and equalize image
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
                 % Load jth image
@@ -122,43 +152,59 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma
                 % Convert RGB image to grayscale and pixel values to double
                 a=double(im2gray(a));
 
-                % Preform a flat-field correction (helps remove vignetting)
-                a2=imflatfield(a,sigma_ff);
+                %--- Approach 1: Variable lighting conditions along track ---%
+                if std(meanOriginal) >= sigBrightness
 
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                %% Further equalize image  
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                    % Preform a flat-field correction (helps remove vignetting)
+                    a2=imflatfield(a,sigma_ff);
+    
+                    % Compute mean brightness over all pixels
+                    meanVal = mean(a2(:),'omitnan');
+                    
+                    % Copy a2 variable to a new variable a3
+                    a3=a2;
+                    
+                    % Set pixels more than n_sigma standard deviations above or
+                    % below the median brightness of the image to image's mean
+                    % brightness value 
+                    a3(a3>median(a3(:))+n_sigma*std(a3(:)) | a3<median(a3(:))-n_sigma*std(a3(:)))=meanVal;
+    
+                    % Set size of the Gaussian filter 
+                    filterSize = 2*(2*sigma_ff)+1;
+    
+                    % Compute the 2D Gaussian filtering of squared deviations
+                    % from the mean. 
+                    squareIm = imgaussfilt((a3-meanVal).^2, sigma_ff, 'Padding', 'symmetric', 'FilterSize', filterSize); 
+                    
+                    % Compute the population variance like quantity 
+                    % for the gaussian filtered squared deviations for
+                    % normalization of 2D Gaussian filter of square deviations
+                    % from the mean 
+                    meanVal2 = mean(squareIm(:),'omitnan');
+    
+                    % Normalize the deviations from the mean by the 2D gaussian
+                    % filtered squared deviations from the mean of the image 
+                    % in order to equalize image. 
+                    a2 = meanVal+(a2-meanVal)./sqrt(squareIm/meanVal2);
 
-                % Compute mean brightness over all pixels
-                meanVal = mean(a2(:),'omitnan');
+                %--- Approach 2: Constant lighting conditions along track ---%
+                else
+
+                    % Equalize image by removing mean pixel brightness and
+                    % replacing it with the median value of the mean
+                    % brightness image
+                    a2 = a-meanIm_temp+medianIm;
+            
+                    % Further equalize image by normalizing the deviation
+                    % from the mean by the standard deviation of pixel
+                    % brightness and replacing it with median standard
+                    % deviation pixel brightness value
+                    a2 = mean(a2(:),'omitnan')+((a2-mean(a2(:),'omitnan'))./stdIm_temp)*medianStd;
+
+                end
                 
-                % Copy a2 variable to a new variable a3
-                a3=a2;
-                
-                % Set pixels more than n_sigma standard deviations above or
-                % below the median brightness of the image to image's mean
-                % brightness value 
-                a3(a3>median(a3(:))+n_sigma*std(a3(:)) | a3<median(a3(:))-n_sigma*std(a3(:)))=meanVal;
-
-                % Set size of the Gaussian filter 
-                filterSize = 2*(2*sigma_ff)+1;
-
-                % Compute the 2D Gaussian filtering of squared deviations
-                % from the mean. 
-                squareIm = imgaussfilt((a3-meanVal).^2, sigma_ff, 'Padding', 'symmetric', 'FilterSize', filterSize); 
-                
-                % Compute the population variance like quantity 
-                % for the gaussian filtered squared deviations for
-                % normalization of 2D Gaussian filter of square deviations
-                % from the mean 
-                meanVal2=mean(squareIm(:),'omitnan');
-
-                % Normalize the deviations from the mean by the 2D gaussian
-                % filtered squared deviations from the mean of the image 
-                % in order to equalize image. 
-                a2=meanVal+(a2-meanVal)./sqrt(squareIm/meanVal2);
-                
-                % Shift by 5000 to eliminate any potential zeros.
+                % Shift by 5000 to eliminate any potential zeros (tif files
+                % cannot contain any zero or negative valued elements)
                 a2=uint16(a2+5000);
                 
                 % Write processed image 
@@ -172,24 +218,3 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma
     delete(poolobj)
 
 end
-
-%% Development code
-% mina2=1;
-
-% Set nans in mean and standard deviation images to zero
-% meanIm(i).im(isnan(meanIm(i).im))=0;
-% stdIm(i).im(isnan(stdIm(i).im))=0;
-
-% % Compute the median mean and standard deviation values
-% medianIm=median(meanIm(i).im(:));
-% medianStd=median(stdIm(i).im(:));
-
-%             tempA=sort(a2(:));
-%             tempA=tempA(~isnan(tempA));
-%             tempA=tempA(1:floor(end/2));
-%             meanVal = mean(tempA,'omitnan');
-
-%             tempA=sort(squareIm(:));
-%             tempA=tempA(~isnan(tempA));
-%             tempA=tempA(1:floor(end/2));
-%             meanVal2=mean(tempA,'omitnan');

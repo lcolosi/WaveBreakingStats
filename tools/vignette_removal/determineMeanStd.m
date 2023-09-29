@@ -36,7 +36,7 @@ function [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginDif,endDif,di
     %                  brightness outlier by by RM_Nr), pixels greater than
     %                  n_sigma are not included in the calculation of the 
     %                  mean. 
-    %   stdIm        : Sample standard deviation of brightness for each
+    %   stdIm        : Population standard deviation of brightness for each
     %                  pixel over the time period of the stable flight 
     %                  (temporal std). Same calculation criteria for the
     %                  mean brightness is applied to the standard
@@ -86,7 +86,7 @@ function [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginDif,endDif,di
         % Sort image brightness elements in ascending order
         ImSeries2=sort(a(:));
         
-        % Remove the highest 20% of pixels from mean brightness
+        % Remove the highest B_threshold*100% of pixels from mean brightness
         % computation. 
         ImSeries2=ImSeries2(1:floor(B_threshold*length(ImSeries2)));
         
@@ -95,10 +95,14 @@ function [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginDif,endDif,di
 
     end
 
+    % Remove zeros at the beginning of meanOriginal that are added
+    % because the j loop variable starts at beginDif
+    meanOriginal = meanOriginal(beginDif:endDif);
+
     % Obtain a logical array indicating the images whose lighting is
     % significantly higher or lower than the median brightness of all
     % images (i.e. the outliers). 
-    [~,RM_Nr]=rmoutliers(meanOriginal(beginDif:endDif));
+    [~,RM_Nr]=rmoutliers(meanOriginal);
 
     % Obtain indices of outliers 
     idx = beginDif:endDif;               
@@ -174,7 +178,7 @@ function [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginDif,endDif,di
     parfor j=beginDif:endDif
 
         % Check if jth image is identified as a brightness outlier
-        if ~ismember(j,idx_outliers)                                        % Old code: if ~ismember(j,RM_Nr-1+beginDif)
+        if ~ismember(j,idx_outliers)                                       
 
             % Update waitbar
             increment(pw)
@@ -210,5 +214,5 @@ function [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginDif,endDif,di
     end
 
     % Compute sample standard deviation
-    stdIm=(stdIM2./(counter-1)).^0.5;                                       % Old code: stdIm=(stdIM2./counter).^0.5;
+    stdIm=(stdIM2./(counter)).^0.5;                                       
 end

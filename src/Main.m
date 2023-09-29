@@ -7,16 +7,19 @@
 
 clc, clearvars, close all
 
+display_text('Estimating Lambda of c distributions.','title')
+display_text('Step 1: Setting input parameters.','section')
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %------- This is the only section of code you will need to change --------%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Select process to run (0 or 1)
 option_plot          = 1;                                                   % Plot verification figures
-option_image_proc    = 1;                                                   % Process raw images and generate intermediate data products (unnecessary if these intermediate products are already generated and you just want to work lambda of c distribution code)
+option_image_proc    = 0;                                                   % Process raw images and generate intermediate data products (unnecessary if these intermediate products are already generated and you just want to work lambda of c distribution code)
 option_globalOrlocal = 1;                                                   % 
 
-% Start date of flight in UTC
+% Start date of flight in UTC time
 StartDate = '20210519';                                                     % Time format: 'yyyymmdd'
 
 % Directories
@@ -36,10 +39,12 @@ tCheck = 7;                                                                 % Ti
 
 % Vignette removal parameters
 winSize = 7;                                                                % Side length of the square kernel used in the 2D moving average for smoothing (low pass filtering) mean brightness of each pixel over the track period. 
-sigma_ff = 300;                                                             % Standard deviation of the Gaussian smoothing filter for the 2D image flate field correction. 
+sigma_ff_m = 300;                                                           % Standard deviation of the Gaussian smoothing filter for the 2D image flate field correction. For Mean and std pixel image brightness calculation.
+sigma_ff_v = 450;                                                           % Same as above, but for vignetting removal calculation.
+sigBrightness = 3;                                                          % Maximum allowed standard deviation of meanOriginal to constitute constant brightness along the track.
 B_threshold = 0.8;                                                          % Fraction of the pixels that are considered in the mean pixel brightness calculation.
 n_sigma = 5;                                                                % Number of standard deviations above or below the median image brightness. Parameter is used for determining which pixels are considered for the calculation of the mean image brightness.
-stdMag=-0.1;
+stdMag=-0.1;                                                                % Number of standard deviations away from the median value of the mean pixel brightness image. Used to determine the sun glint brightness threshold. 
 
 % Trimble georeferencing project parameters 
 camName = 'flare';                                                          % Camera name
@@ -53,11 +58,16 @@ peakPercentage=20;                                                          % wh
 % Set text interpreter
 set_interpreter('latex')
 
+display_text(['Date: ' StartDate(end-3:end-2) '/' StartDate(end-1:end) '/' StartDate(1:4)],'body')
+display_text('Done!','body')
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Load EO data and determine time indices of each track in the EO file
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
-% Rename EO directory in dirout path as Trimble_EO 
+display_text('Step 2: Loading EO data and identifing flight tracks.','section')
+
+% Identify that EO files are processed through Trimble
 if isfolder([dirProc 'EO'])
     movefile([dirProc 'EO'],[dirProc 'Trimble_EO']);
 end
@@ -85,6 +95,8 @@ tracks = DefineTracks(An);
 gps_time = str2num(cell2mat(An(:,1)));                                      %#ok<ST2NM> 
 utc_time = gpssw2utcdn(gps_time,StartDate);
 
+display_text('Done!','body')
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Determine aircraft stability for each flight track 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
@@ -92,12 +104,14 @@ utc_time = gpssw2utcdn(gps_time,StartDate);
 % Note: If flight track is NOT steady, Lambda of c distributions and 
 % whitecap coverage will not be computed.  
 
+display_text('Step 3: Determining periods of aircraft stability for each track.','section')
+
 % Identify track stability based on input criteria
 trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,Shift,Nstd,tCheck,An);
 
 % Plot headings in flight tracks, with all other data (used portion of 
 % the track, whether is it labeled as steady or not).
-if option_plot 
+if option_plot == 1
 
     % Create a subdirectory for flight trajectory and stability plots
     dirTS = [dirV 'Flight_Trajectories_And_Stability\'];
@@ -110,18 +124,22 @@ if option_plot
     plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate);
 end
 
+display_text('Done!','body')
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Remove vignetting and crop out high glint 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+close all 
+display_text('Step 4: Removing vignetting, equalizing image, and determining mask for high sun glint regions.','section')
 
 % Obtain the filenames of the non-georeferenced video images 
-D_Im=dir([dirRaw '*.tif']);
+D_Im = dir([dirRaw '*.tif']);
 
 % Define tracks in images
 tracks_Im = DefineTracksIm(D_Im,tracks);
 
 % Preform image processing of raw non-georeference images
-if option_image_proc
+if option_image_proc == 1
 
     % Create a subdirectory for intermediate image products
     dirVR=[dirOut 'nongeoreferenced_images_with_Vignetting_Removed\'];
@@ -130,27 +148,36 @@ if option_image_proc
     if ~exist(dirMGlint, 'dir'), mkdir(dirMGlint); end
 
     % Compute the mean brightness and standard deviation of each track
-    [meanIm,stdIm,RM_Nr,meanOriginal]=getImMeanStd(dirRaw,D_Im,tracks_Im,trackTag,tracks,winSize,sigma_ff,B_threshold,n_sigma);
+    [meanIm,stdIm,RM_Nr,meanOriginal]=getImMeanStd(dirRaw,D_Im,tracks_Im,trackTag,tracks,winSize,sigma_ff_m,B_threshold,n_sigma);
     
     % Save output from getImMeanStd 
     save([dirOut 'mean_Images_Per_Track.mat'],'meanIm','stdIm','RM_Nr','meanOriginal');
     
     % Remove vignetting and equalize raw nongeoreferenced image; save 
     % intermediate products to dirVR
-    sigma_ff = 450;
-    saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirVR,sigma_ff,n_sigma);
+    saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirVR,sigma_ff_v,n_sigma,meanOriginal,sigBrightness);
     
-    % Save image masks for detecting high glint areas; save 
+    % Save normalized image for detecting high sun glint areas; save 
     % intermediate products to dirMGlint
-    saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirMGlint);
+    saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,dirMGlint);
     
     % Eliminate areas with high glint. Std mag determines the number of
     % standard deviations for categorizing high glint areas.
     [Glint,Glint_mask]=det_glint(meanIm,stdMag,tracks,trackTag);
+
+    % Save output from det_glint 
+    save([dirOut 'glint_threshold_Per_Track.mat'],'Glint','Glint_mask');
+
+else 
+    
+    % Load mean brightness and standard deviation imagesand glint threshold
+    load([dirOut 'mean_Images_Per_Track.mat'])
+    load([dirOut 'glint_threshold_Per_Track.mat'])
+
 end
 
 % Plot 
-if option_plot
+if option_plot == 1
 
     % Create a subdirectory for vignette removal plots
     dirVn=[dirV 'Vignetting\'];
@@ -160,9 +187,13 @@ if option_plot
     plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,Glint);
 end
 
+display_text('Done!','body')
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Build and execute .bat file for georeferencing raw processed images with Trimble 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+clc
+display_text('Step 5: Building and executing .bat files for georeferencing raw processed images','section')
 
 % Split the EO files into individual tracks 
 cleanEOfile(EOpath,EOdir,tracks,D);
@@ -183,7 +214,7 @@ for i=1:length(tracks)
         
         % Set the paths to nongeoreferenced images to be processed and 
         % output directory for georeferenced images 
-        dirin_img = [dirProc 'nongeoreferenced_Images_With_Vignetting_Removed_V2\Track_' num2str(i) '\']; %directory of all tif imagery to use for this single flight
+        dirin_img = [dirProc 'nongeoreferenced_Images_With_Vignetting_Removed\Track_' num2str(i) '\']; %directory of all tif imagery to use for this single flight
         dirin_prj = dirProc;
         
         % Build .bat file for running trimble georeferencing project 
@@ -191,7 +222,7 @@ for i=1:length(tracks)
     end
 end
 
-%--- Build .bat file for the mask ---%
+%--- Build .bat file for the high glint mask image ---%
 
 % Loop through tracks 
 for i=1:length(tracks)
@@ -247,8 +278,10 @@ for i=1:length(tracks)
     end
 end
 
+display_text('Done!','body')
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Determine brightness threshold for each track
+%% Determine brightness threshold of breakers for each track
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Set pixel value range for 16 bit images
@@ -257,12 +290,14 @@ arrayHist=0:16:256*256;
 % Set directory to save brightness threshold
 dirProcessed=[dirProc 'Output\'];
 
-% 
+% Jessica's Method
 if option_globalOrlocal == 1
     [Threshold,N]=global_Thresh(peakPercentage,dirProcessed,D_Im,tracks_Im,trackTag,tracks,arrayHist,meanIm,RM_Nr,Glint,Glint_mask);
 else 
     [Threshold,N]=local_Thresh(peakPercentage,dirProcessed,D_Im,tracks_Im,trackTag,tracks,arrayHist,meanIm,RM_Nr,Glint,Glint_mask,localStep);
 end
+
+% Slight variation on Jessica's method
 
 % Loop through tracks
 for i=1:length(tracks)

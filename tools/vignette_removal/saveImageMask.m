@@ -1,9 +1,17 @@
-function saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirOut)
+function saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,dirOut)
     
     %%%%
-    % saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirOut)
+    % saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,dirOut)
     %
-    % Function for  
+    % Function for identifying high sun glint regions in each image for
+    % each track. More specifically, this function normalizes each image 
+    % for a given track by the maximum brightness in the image and saves 
+    % them in a new tif file. The output of this function will be 
+    % georeferenced using trimble. Then using the glint brightness
+    % threshold from det_glint.m script, the high sun glint region will be 
+    % identified for each georeferenced image. The mask associated with
+    % this region will be applied to the georeferenced image with 
+    % vignetting removed.      
     %
     %   Parameters
     %   ---------- 
@@ -39,15 +47,11 @@ function saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirOut)
     %   meanIm    : Mean brightness of each pixel over the time period
     %               of the stable flight track (temporal mean). Mean
     %               brightness is smoothed using a 2D moving average.
-    %   stdIm     : Sample standard deviation of brightness for each
-    %               pixel over the time period of the stable flight 
-    %               (temporal std). Standard deviation of brightness
-    %               is smoothed using a 2D moving average.
     %   dirOut    : Path to directory for saving intermediate data products.
     % 
     %   Returns
     %   -------
-    %   Saves the image masks in the directory specified by dirOut. 
+    %   Saves the normalized images in the directory specified by dirOut. 
     %  
     % 
     %%%%
@@ -70,16 +74,27 @@ function saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirOut)
     
     end
 
+    % Generate waitbar
+    pos = [585 421.8750 270 56.2500];
+    f = waitbar(0,'Please wait...','Position', [pos(1) pos(2)+2*pos(4) pos(3) pos(4)]);
+
     % Loop through tracks
-    for i=2 %1:length(tracks)
+    for i=1 %1:length(tracks)
+
+        % Update waitbar
+        waitbar(i/length(tracks),f,...
+            {['Running saveImageMask.m : On track ' num2str(i) ' of ' num2str(length(tracks))]; [num2str(round((i/length(tracks))*100)) '$\%$ complete...']})
 
         % Check if track is stable and if full track has start and end time
         % indices
         if (trackTag(i).stable==1) && (~isempty(tracks(i).Indices))
 
+            % Set the mean pixel images to avoid high data communication
+            % overhead in parfor loop 
+            meanIm_temp = meanIm(i).im;
+
             % Set nans in mean and standard deviation images to zero
-            meanIm(i).im(isnan(meanIm(i).im))=0;
-            stdIm(i).im(isnan(stdIm(i).im))=0;
+            meanIm_temp(isnan(meanIm_temp))=0;
             
             % Set beginning and end time indices for full flight track 
             beginDif=tracks_Im(i).Indices(1);                               %+trackTag(i).range(1)-tracks(i).Indices(1);
@@ -94,7 +109,7 @@ function saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirOut)
                 
                 % Normalize mean image by its maximum value and convert to
                 % array elements to 16 bit unsigned integers  
-                a2=uint16(meanIm(i).im/max(meanIm(i).im(:))*256*256);
+                a2=uint16((meanIm_temp/max(meanIm_temp(:)))*256*256);
                 
                 % Write processed image mask
                 imwrite(a2,[dirV D_Im(j).name(1:end-4) '_Mask.tif']);
@@ -107,21 +122,3 @@ function saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,dirOut)
     delete(poolobj)
 
 end
-
-%% Developmental Code
-% This function crops out the areas with strong glint, removes vigneting,
-% and saves the processed images to dirProcessed folder.
-% Input: 
-% 
-
-%             % Compute the median mean and standard deviation values
-%             medianIm=median(meanIm(i).im(:));
-%             medianStd=median(stdIm(i).im(:));
-
-%             a=imread([dirRaw D_Im(j).name]);
-%             a=double(im2gray(a));
-%             
-%             a2=a-meanIm(i).im+medianIm;
-%             a2=nanmean(a2(:))+(a2-nanmean(a2(:)))./stdIm(i).im*medianStd;
-%mina2(j+1-beginDif)=min(a2(:));
-% Shift by 5000 to eliminate any potential zeros.

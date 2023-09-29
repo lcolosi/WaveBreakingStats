@@ -36,7 +36,7 @@ function Counter=HeaderPosition(EOpath,String)
     Counter=1;
 
     % Loop through lines in text file and check if line contains '(sec)'
-    % string
+    % string (marks the end of the header)
     while ~contains(tline,String)
         % Obtain ith line's character string
         tline = fgetl(fid);

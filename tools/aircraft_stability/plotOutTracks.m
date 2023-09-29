@@ -172,7 +172,7 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
     print(gcf,'-dpng', [dirTS 'flight_trajectory.png'], '-r300');
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% Plot time intervals associated with track 
+    %% Plot time intervals associated with each track and its stable flight period 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % Generate figure
@@ -394,13 +394,3 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
         end
     end
 end
-
-    %% Development Code
-    
-%     % Obtain GPS time at beginning and end of ith full flight track    
-%     vreme=str2num(cell2mat(An(tracks(i).Indices,1)));
-%     
-%     % Convert to local time (incorrect calculation of local time; UTC time should be used)
-%     tracksTime=StartTime+(vreme(1)+vreme(2))/2/86400;
-% 
-%     dt=str2num(An{tracks(i).Indices(1)+1,1})-str2num(An{tracks(i).Indices(1),1});

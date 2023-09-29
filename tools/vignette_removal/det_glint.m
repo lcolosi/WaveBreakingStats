@@ -1,10 +1,9 @@
-function [Glint,Glint_mask]=det_glint(meanIm,stdMag,tracks,trackTag)
+function [Glint]=det_glint(meanIm,stdMag,tracks,trackTag)
 
     %%%%
-    % [Glint,Glint_mask]=det_glint(meanIm,stdMag,tracks,trackTag)
+    % [Glint]=det_glint(meanIm,stdMag,tracks,trackTag)
     %
-    % Function for determining the glint brightness threshold and the
-    % corresponding high-glint mask for the track.   
+    % Function for determining the glint brightness threshold.   
     %
     %   Parameters
     %   ---------- 
@@ -65,33 +64,8 @@ function [Glint,Glint_mask]=det_glint(meanIm,stdMag,tracks,trackTag)
             imStd=std(imTemp);
             
             % Compute the brightness threshold for sun glint
-            Glint(i).list=imStd*stdMag+imMedian;
+            Glint(i).list=imStd*stdMag+imMedian;                            %#ok
             
-            % Generate a logical for identifying pixels with brightness
-            % above the glint threshold
-            BinaryImage=meanIm(i).im>Glint(i).list;
-
-            % Calculate the following properties for each region
-            % with brightness greater than the glint threshold: 
-            %   (1) Area: Number of pixels in the region (returns a
-            %             scalar for each region identified).
-            %   (2) PixelIdxList : Linear indices of the pixels in the
-            %                     region (returns a vector of p 
-            %                     elements long for each region where
-            %                     p is the total number of pixels in
-            %                     the region)
-            % The statss variable is a Nx1 structure with fields Area
-            % and PixelIdxList where N is the number of regions
-            % identified. 
-            statss = regionprops(BinaryImage, 'Area','PixelIdxList');
-
-            % Find the region with the largest area  
-            [~,Indeks] = max( [statss.Area] );
-
-            % Obtain the pixel indices of this region; this constitutes
-            % the high glint mask 
-            Glint_mask(i).list=statss(Indeks).PixelIdxList;                 % Old code: imStd*(stdMag+1)+imMedian;
-
         end
     end
 end

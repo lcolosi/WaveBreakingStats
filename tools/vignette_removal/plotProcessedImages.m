@@ -3,21 +3,21 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
     %%%%
     % plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,Glint)
     %
-    % Function for  
+    % Function for plotting the mean and standard Deviation Pixel 
+    % Brightness image for each track and for plotting a side-by-side
+    % comparison of the raw and processed (equilized/vignetting-removed)
+    % images. 
     % 
-    % % Function for plotting images of mean brightness and std of brightness for each track,
-    % and for plotting out comparison of raw and images with removed vignetting
-    % Input - 
-    %
-    % Finally, the original and processed images are plotted out for
-    % comparison. The mean image and mean std are also plotted out.
     %
     %   Parameters
     %   ---------- 
-    %   dirVn : 
-    %   dirRaw : 
-    %   D_Im : 
-    %   tracks_Im :  
+    %   dirVn     : Path to directoryu for saving figures displaying
+    %               vignette removal. 
+    %   dirRaw    : Path to raw nongeoreferenced images. 
+    %   D_Im      : Filenames of the raw nongeoreferenced video images.
+    %   tracks_Im : Structure containing the start and end time indices of
+    %               each full flight track (located in the indices field). 
+    %               Indices derived from raw imagery file names. 
     %   trackTag  : Structure with three fields: 
     %               (1) stable: An identifier for whether the Track is 
     %                           stable or unstable based on the inputted
@@ -46,12 +46,17 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
     %   meanIm   : Mean brightness of each pixel over the time period
     %              of the stable flight track (temporal mean). Mean
     %              brightness is smoothed using a 2D moving average.
-    %   stdIm    : 
-    %   Glint    : 
+    %   stdIm    : Sample standard deviation of brightness for each
+    %               pixel over the time period of the stable flight 
+    %               (temporal std). Standard deviation of brightness
+    %               is smoothed using a 2D moving average.
+    %   Glint    : Glint threshold brightness. 
     %
     %   Returns
     %   -------
-    %  
+    %   For each track, two sets of figures are returned: (1) mean and std
+    %   of brightness for each pixel and (2) comparison between raw and
+    %   processed images. 
     % 
     %%%%
 
@@ -64,7 +69,7 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
 
     % Loop through tracks 
-    for i=2 %1:length(tracks)
+    for i=1 %1:length(tracks)
         
         % Check if track is stable and if full track has start and end time
         % indices
@@ -77,7 +82,7 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
             % Generate figure
             figure('Name', ['Mean and standard Deviation Pixel Brightness  - Flight Track' num2str(i)]);
             set(gcf,'color',[1,1,1])
-            set(gcf,'Position',[100,100,1500,700])
+            set(gcf,'Position',[100,100,1500,500])
 
             %--------- Subplot 1 ---------%
             subplot(1,2,1);
@@ -94,7 +99,7 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
                 daspect([1 1 1])
 
                 % Set colorbar attributes
-                colormap(bone(256));
+                colormap(bone);
                 yy=colorbar();
                 title(yy,'Brightness','fontname',font,'FontSize',fontsize)
 
@@ -113,7 +118,7 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
                 daspect([1 1 1])
 
                 % Set colorbar attributes
-                colormap(bone(256));
+                colormap(bone);
                 yy=colorbar();
                 title(yy,'Brightness','fontname',font,'FontSize',fontsize)
             
@@ -128,7 +133,7 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
             % Select 10 images from the track for plotting
             imNum=floor((0:9)*(endDif-beginDif)/10)+beginDif;
 
-            % Loop through first ten images 
+            % Loop through the ten images 
             for j=1:10
                 
                 % Load jth image
@@ -142,30 +147,42 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
                 % Compute the median of the mean and standard deviation images 
-                meanTemp=median(meanIm(i).im(:));
-                stdTemp=median(stdIm(i).im(:));
+                meanTemp=median(meanIm(i).im(:),'omitnan');
+                stdTemp=median(stdIm(i).im(:),'omitnan');
                 
-                % Remove mean pixel brightness and add spatial median of mean pixel brightness 
+                % Remove mean pixel brightness and add spatial median of 
+                % mean pixel brightness to equalize image 
                 a2=a-meanIm(i).im+meanTemp;
 
-                % 
+                % Remove vignetting
                 a2=mean(a2(:),'omitnan')+(a2-mean(a2(:),'omitnan'))./stdIm(i).im*stdTemp;
                 
                 % Obtain glint magnitude threshold
                 glintMag=Glint(i).list;
                 
-                % Generate a logical for identifying pixels with brightness
+                % Generate a logical array for identifying pixels with brightness
                 % above the glint threshold
-                BinaryImage=meanIm(i).im>glintMag;
+                BinaryImage = meanIm(i).im > glintMag;
                 
-                % Find the number of pixels in the high glint regions and
-                % their indices 
+                % Calculate the following properties for each region
+                % with brightness greater than the glint threshold: 
+                %   (1) Area: Number of pixels in the region (returns a
+                %             scalar for each region identified).
+                %   (2) PixelIdxList : Linear indices of the pixels in the
+                %                     region (returns a vector of p 
+                %                     elements long for each region where
+                %                     p is the total number of pixels in
+                %                     the region)
+                % The statss variable is a Nx1 structure with fields Area
+                % and PixelIdxList where N is the number of regions
+                % identified.
                 statss = regionprops(BinaryImage, 'Area','PixelIdxList');
                 
-                % 
+                % Find the region with the largest area 
                 [~,Indeks] = max( [statss.Area] );
                 
-                % 
+                % Obtain the pixel indices of this region; this constitutes
+                % the high glint mask
                 GlintTemp=statss(Indeks).PixelIdxList;
                 
                 % Apply glint mask to image
@@ -178,7 +195,7 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
                 % Generate figure
                 figure('Name', ['Image Processing  - Flight Track' num2str(i)]);
                 set(gcf,'color',[1,1,1])
-                set(gcf,'Position',[100,100,1300,900])
+                set(gcf,'Position',[100,100,1300,500])
 
                 %--------- Subplot 1 ---------%
                 subplot(1,2,1);
@@ -222,19 +239,10 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
                     drawnow
 
                 % Save figure
-                print(gcf,'-dpng', [trackDir 'Image_processing_compare-Image' num2str(i) '.png'], '-r200');
+                print(gcf,'-dpng', [trackDir 'Image_processing_compare-Image_M2' num2str(j) '.png'], '-r200');
         
-                close all
             end
         end
         
     end
 end
-
-%% Developmental code 
-
-% % Select 10 images from the track for plotting
-% beginDif=tracks_Im(i).Indices(1)+trackTag(i).range(1)-tracks(i).Indices(1);
-% endDif=tracks_Im(i).Indices(2)+trackTag(i).range(2)-tracks(i).Indices(2);
-% 
-% imNum=floor((0:9)*(endDif-beginDif)/10)+beginDif;

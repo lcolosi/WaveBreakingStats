@@ -3,7 +3,8 @@ function [Glint,Glint_mask]=det_glint(meanIm,stdMag,tracks,trackTag)
     %%%%
     % [Glint,Glint_mask]=det_glint(meanIm,stdMag,tracks,trackTag)
     %
-    % Function for  
+    % Function for determining the glint brightness threshold and the
+    % corresponding high-glint mask for the track.   
     %
     %   Parameters
     %   ---------- 
@@ -39,14 +40,15 @@ function [Glint,Glint_mask]=det_glint(meanIm,stdMag,tracks,trackTag)
     % 
     %   Returns
     %   -------
-    %   Glint      : 
-    %   Glint_mask :
-    %  
+    %   Glint      : Glint threshold brightness for each track. A scalar
+    %                quantity defined as the median value of mean pixel
+    %                brightness image plus n times the median value of the 
+    %                standard deviation of pixel brightness.     
     % 
     %%%%
 
     % Loop through tracks
-    for i=2 %1:length(tracks)
+    for i=1 %1:length(tracks)
         
         % Check if track is stable 
         if trackTag(i).stable==1
@@ -54,30 +56,42 @@ function [Glint,Glint_mask]=det_glint(meanIm,stdMag,tracks,trackTag)
             % Sort mean pixel brightness in ascending numerical order
             imTemp=sort(meanIm(i).im(:));
             
-            % 
-            %imTemp=imTemp(1:floor(end/1));
-            
             % Remove NaNs 
             imTemp = imTemp(~isnan(imTemp));
             
-            % Compute meadian and standard 
+            % Compute meadian and standard deviation of the mean pixel
+            % brightness image
             imMedian=median(imTemp);
             imStd=std(imTemp);
             
-            % Find biggest connected area corresponding to glint using the
-            % selected criteria.
+            % Compute the brightness threshold for sun glint
             Glint(i).list=imStd*stdMag+imMedian;
             
-            % Same, but for surrounding area
-            Glint_mask(i).list=imStd*(stdMag+1)+imMedian;
+            % Generate a logical for identifying pixels with brightness
+            % above the glint threshold
+            BinaryImage=meanIm(i).im>Glint(i).list;
+
+            % Calculate the following properties for each region
+            % with brightness greater than the glint threshold: 
+            %   (1) Area: Number of pixels in the region (returns a
+            %             scalar for each region identified).
+            %   (2) PixelIdxList : Linear indices of the pixels in the
+            %                     region (returns a vector of p 
+            %                     elements long for each region where
+            %                     p is the total number of pixels in
+            %                     the region)
+            % The statss variable is a Nx1 structure with fields Area
+            % and PixelIdxList where N is the number of regions
+            % identified. 
+            statss = regionprops(BinaryImage, 'Area','PixelIdxList');
+
+            % Find the region with the largest area  
+            [~,Indeks] = max( [statss.Area] );
+
+            % Obtain the pixel indices of this region; this constitutes
+            % the high glint mask 
+            Glint_mask(i).list=statss(Indeks).PixelIdxList;                 % Old code: imStd*(stdMag+1)+imMedian;
+
         end
     end
 end
-
-%% Developmental code 
-    % Find biggest connected area corresponding to glint using the
-    % selected criteria.
-    %         BinaryImage=meanIm(i).im>imMedian+imStd*stdMag;
-    %         statss = regionprops(BinaryImage, 'Area','PixelIdxList');
-    %         [biggest_area,Indeks] = max( [statss.Area] );
-    %         Glint(i).list=statss(Indeks).PixelIdxList;

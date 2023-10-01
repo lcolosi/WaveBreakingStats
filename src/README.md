@@ -23,38 +23,44 @@ Estimating $\Lambda(c)$ distribution includes the following steps:
 
 ## Input parameters
 ### Select processes to run (0 or 1)
-1. `option_plot`: Plot verification figures
-2. `option_image_proc`: Process raw images and generate intermediate data products (unnecessary if these intermediate products are already generated and you just want to work lambda of c distribution code)
-3. `option_globalOrlocal`:
+1. `option_plot` : Plot verification figures
+2. `option_image_proc` : Process raw images and generate intermediate data products (unnecessary if these intermediate products are already generated and you just want to work lambda of c distribution code)
+3. `option_globalOrlocal` :
+
+### Date
+1. `StartDate` : Start date of flight in UTC time (format: 'yyyymmdd')
 
 ### Directories
-1. `dirRaw`: Raw (non-georeferenced) video images for a given flight
-2. `dirProc`: Trimble processed (georeferenced) video images for a given flight
-3. `dirV`: Verification figures
-4. `dirOut`: Intermediate data products (.mat files)
+1. `dirRaw` : Raw (non-georeferenced) video images for a given flight
+2. `dirProc` : Trimble processed (georeferenced) video images for a given flight
+3. `dirV` : Verification figures
+4. `dirOut` : Intermediate data products (.mat files)
 
 ### Flight Stability criteria parameters
-1. `maxPer`: Maximum percent of flight track to be removed at the beginning and end of the track. For example, maxPer = [25,25] means that at a minimium, 50 percent (from 25% - 75%) of the flight track will be used in analysis with the 0-25% and 75%-100% removed from the flight track.  
-2. `sigRoll`: Maximum allowed roll standard deviations for a stable segment.    
-3. `sigPitch`: Maximum allowed pitch standard deviations for a stable segment.
-4. `sigHeading`: Maximum allowed heading standard deviations for a stable segment.
-5. `Shift`: Shifts in flight track for finding a stable flight period
-6. `Nstd`: Number of standard deviations of either roll, pitch, or heading that constitute an abrupt change in attitude of the plane
-7. `tcheck`: Time interval between the jth roll/pitch/heading observation to check if their is an abrupt change in attitude shortly after the jth observation.
+1. `maxPer` : Maximum percent of flight track to be removed at the beginning and end of the track. For example, maxPer = [25,25] means that at a minimum, 50 percent (from 25% - 75%) of the flight track will be used in analysis with 0-25% and 75%-100% removed from the flight track.  
+2. `sigRoll` : Maximum allowed roll standard deviations for a stable segment.    
+3. `sigPitch` : Maximum allowed pitch standard deviations for a stable segment.
+4. `sigHeading` : Maximum allowed heading standard deviations for a stable segment.
+5. `Shift` : Shifts in flight track for finding a stable flight period
+6. `Nstd` : Number of standard deviations of either roll, pitch, or heading that constitute an abrupt change in attitude of the plane
+7. `tcheck` : Time interval between the jth roll/pitch/heading observation to check if there is an abrupt change in attitude shortly after the jth observation.
 
 ### Vignette removal parameters
-1. `winSize`:
-2. `sigma_ff_m`:
-3. `sigma_ff_v`:
-4. `sigBrightness`:
-5. `n_sigma`:
-6. `stdMag`:
+1. `winSize` : Side length of the square kernel used in the 2D moving average for smoothing (low pass filtering) mean brightness of each pixel over the track period. 
+2. `sigma_ff_m` : Standard deviation of the Gaussian smoothing filter for the 2D image flat-field correction used in calculating the mean and standard deviation pixel image brightness.
+3. `sigma_ff_v` : Same as above, but for vignetting removal calculation.
+4. `sigBrightness` : Maximum allowed standard deviation of meanOriginal to constitute constant brightness along the track.
+5. `B_threshold` : Fraction of the pixels that are considered in the mean pixel brightness calculation.
+6. `n_sigma` : Number of standard deviations above or below the median image brightness. The parameter is used for determining which pixels are considered for the calculation of the mean image brightness.
+7. `stdMag` : Number of standard deviations away from the median value of the mean pixel brightness image. Used to determine the sun glint brightness threshold. 
    
 ### Trimble georeferencing project parameters
-1. `camName`:
-2. `utmZone`:
+1. `camName` : Video Camera name 
+2. `utmZone` : UTM zone for experiment
    
 ### Brightness threshold parameters
+1. `localStep` :
+2. `peakPercentage` :
 
 ## Tips for running the code 
 

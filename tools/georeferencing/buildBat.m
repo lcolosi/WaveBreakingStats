@@ -3,7 +3,7 @@ function buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,trackNr,camName)
     %%%%
     % buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,trackNr,camName)
     %
-    % Function for  
+    % Function for generating Trimble georeferencing batch file.    
     %
     %   Parameters
     %   ---------- 

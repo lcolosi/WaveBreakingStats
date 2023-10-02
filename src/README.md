@@ -25,7 +25,7 @@ Estimating $\Lambda(c)$ distribution includes the following steps:
 ### Select processes to run (0 or 1)
 1. `option_plot` : Plot verification figures
 2. `option_image_proc` : Process raw images and generate intermediate data products (unnecessary if these intermediate products are already generated and you just want to work lambda of c distribution code)
-3. `option_globalOrlocal` :
+3. `option_globalOrlocal` : Check if a global brightness threshold is defined for the area (1), or a local one for each image (0).
 
 ### Date
 1. `StartDate` : Start date of flight in UTC time (format: 'yyyymmdd')

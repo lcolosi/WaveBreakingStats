@@ -15,45 +15,44 @@ display_text('Step 1: Setting input parameters.','section')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Select process to run (0 or 1)
-option_plot          = 1;                                                   % Plot verification figures
-option_image_proc    = 0;                                                   % Process raw images and generate intermediate data products (unnecessary if these intermediate products are already generated and you just want to work lambda of c distribution code)
-option_globalOrlocal = 1;                                                   % 
+option_plot          = 1;                                                   
+option_image_proc    = 0;                                                   
+option_globalOrlocal = 1;                                                 
 
 % Start date of flight in UTC time
-StartDate = '20210519';                                                     % Time format: 'yyyymmdd'
+StartDate = '20210519';                                                    
 
 % Directories
-dirRaw = 'X:\\TFO_2021\Processed\VIDEO\16bit_TIF_Frames\20210519\';            % Raw (non-georeferenced) video images for a given flight
-dirProc = 'X:\\TFO_2021\Processed\VIDEO\Trimble\20210519\';                    % Trimble processed (georeferenced) video images for a given flight
-dirV = 'D:\DEPLOYMENTS\TFO_2021\figs\video\Quality_Control\20210519\';         % Verification figures
-dirOut = 'D:\DEPLOYMENTS\TFO_2021\data\video\Intermediate_Products\20210519\'; % Intermediate data products (in .mat files)
+dirRaw = 'X:\\TFO_2021\Processed\VIDEO\16bit_TIF_Frames\20210519\';         
+dirProc = 'X:\\TFO_2021\Processed\VIDEO\Trimble\20210519\';                 
+dirV = 'D:\DEPLOYMENTS\TFO_2021\figs\video\Quality_Control\20210519\';      
+dirOut = 'D:\DEPLOYMENTS\TFO_2021\data\video\Intermediate_Products\20210519\'; 
 
 % Flight stability criteria parameters
-maxPer = [25 25];                                                           % Maximum percent of flight track to be removed at the begin and end of the track. For example, maxPer = [25,25] means that at a minimium, 50 percent (from 25% - 75%) of the flight track will be used in analysis with the 0-25% and 75%-100% removed from the flight track.  
-sigRoll = 3;                                                                % Maximum allowed roll standard deviations for a stable segment.    
-sigPitch = 3;                                                               % Maximum allowed pitch standard deviations for a stable segment.
-sigHeading = 6;                                                             % Maximum allowed heading standard deviations for a stable segment.
-Shift = [-0.8*maxPer(1) 0.8*maxPer(2);0.8*maxPer(1) -0.8*maxPer(2);0 0];    % Shifts in flight track for finding a stable fligt period
-Nstd = 4;                                                                   % Number of standard deviations of either roll, pitch, or heading that constitute an abrupt change in attitude of the plane
-tCheck = 7;                                                                 % Time interval between the jth roll/pitch/heading observation to check if their is an abrupt change in attitude shortly after the jth observation.
+maxPer = [25 25];                                                           
+sigRoll = 3;                                                                   
+sigPitch = 3;                                                               
+sigHeading = 6;                                                             
+Shift = [-0.8*maxPer(1) 0.8*maxPer(2);0.8*maxPer(1) -0.8*maxPer(2);0 0];    
+Nstd = 4;                                                                   
+tCheck = 7;                                                                 
 
 % Vignette removal parameters
-winSize = 7;                                                                % Side length of the square kernel used in the 2D moving average for smoothing (low pass filtering) mean brightness of each pixel over the track period. 
-sigma_ff_m = 300;                                                           % Standard deviation of the Gaussian smoothing filter for the 2D image flate field correction. For Mean and std pixel image brightness calculation.
-sigma_ff_v = 450;                                                           % Same as above, but for vignetting removal calculation.
-sigBrightness = 3;                                                          % Maximum allowed standard deviation of meanOriginal to constitute constant brightness along the track.
-B_threshold = 0.8;                                                          % Fraction of the pixels that are considered in the mean pixel brightness calculation.
-n_sigma = 5;                                                                % Number of standard deviations above or below the median image brightness. Parameter is used for determining which pixels are considered for the calculation of the mean image brightness.
-stdMag=-0.1;                                                                % Number of standard deviations away from the median value of the mean pixel brightness image. Used to determine the sun glint brightness threshold. 
+winSize = 7;                                                                
+sigma_ff_m = 300;                                                           
+sigma_ff_v = 450;                                                           
+sigBrightness = 3;                                                          
+B_threshold = 0.8;                                                          
+n_sigma = 5;                                                                
+stdMag=-0.1;                                                                
 
 % Trimble georeferencing project parameters 
-camName = 'flare';                                                          % Camera name
-utmZone='10 N';                                                             % UTM zone for experiment
+camName = 'flare';                                                         
+utmZone='10 N';                                                            
 
 % Brightness threshold parameters
-GlobalOrLocal=0;                                                            % Check if a global brightness threshold is defined for the area (1), or a local one for each image (0).
-localStep=3;                                                                % A range determining how many images are included into the analysis for local threshold (200 would indicate up to 100 images taken before or after the current one)
-peakPercentage=20;                                                          % what percentage of peak magnitude is taken as a breaking threshold (i.e. 10 would mean 10%)
+localStep=3;                                                               
+peakPercentage=20;                                                         
 
 % Set text interpreter
 set_interpreter('latex')
@@ -62,7 +61,7 @@ display_text(['Date: ' StartDate(end-3:end-2) '/' StartDate(end-1:end) '/' Start
 display_text('Done!','body')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Load EO data and determine time indices of each track in the EO file
+%% Import EO data and determine time indices of each track in the EO file
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
 display_text('Step 2: Loading EO data and identifing flight tracks.','section')
@@ -127,10 +126,10 @@ end
 display_text('Done!','body')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Remove vignetting and crop out high glint 
+%% Remove vignetting and computing parameters for identifying high glint regions 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 close all 
-display_text('Step 4: Removing vignetting, equalizing image, and determining mask for high sun glint regions.','section')
+display_text('Step 4: Removing vignetting, equalizing image, and computing parameters for high sun glint regions.','section')
 
 % Obtain the filenames of the non-georeferenced video images 
 D_Im = dir([dirRaw '*.tif']);
@@ -163,7 +162,7 @@ if option_image_proc == 1
     
     % Eliminate areas with high glint. Std mag determines the number of
     % standard deviations for categorizing high glint areas.
-    [Glint,Glint_mask]=det_glint(meanIm,stdMag,tracks,trackTag);
+    [Glint]=det_glint(meanIm,stdMag,tracks,trackTag);
 
     % Save output from det_glint 
     save([dirOut 'glint_threshold_Per_Track.mat'],'Glint','Glint_mask');
@@ -190,7 +189,7 @@ end
 display_text('Done!','body')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Build and execute .bat file for georeferencing raw processed images with Trimble 
+%% Build and execute .bat file for georeferencing processed images with Trimble 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 clc
 display_text('Step 5: Building and executing .bat files for georeferencing raw processed images','section')

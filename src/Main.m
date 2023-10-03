@@ -15,7 +15,8 @@ display_text('Step 1: Setting input parameters.','section')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Select process to run (0 or 1)
-option_plot          = 1;                                                   
+option_plot          = 0; 
+option_eo_split      = 0;
 option_image_proc    = 0;                                                   
 option_globalOrlocal = 1;                                                 
 
@@ -90,6 +91,12 @@ An = cropText(A);
 % Determine the start and end time indices for each flight tracks.
 tracks = DefineTracks(An);
 
+% Split the EO files into individual track files (helps to break up code
+% when georeferencing images with Trimble)
+if option_eo_split == 1
+    cleanEOfile(EOpath,EOdir,tracks,D);
+end
+
 % Convert from gps time in seconds of the week to UTC time
 gps_time = str2num(cell2mat(An(:,1)));                                      %#ok<ST2NM> 
 utc_time = gpssw2utcdn(gps_time,StartDate);
@@ -128,8 +135,8 @@ display_text('Done!','body')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Remove vignetting and computing parameters for identifying high glint regions 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-close all 
-display_text('Step 4: Removing vignetting, equalizing image, and computing parameters for high sun glint regions.','section')
+
+display_text('Step 4: Removing vignetting, equalizing image, and computing images for identifying high sun glint regions.','section')
 
 % Obtain the filenames of the non-georeferenced video images 
 D_Im = dir([dirRaw '*.tif']);
@@ -191,13 +198,10 @@ display_text('Done!','body')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Build and execute .bat file for georeferencing processed images with Trimble 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-clc
-display_text('Step 5: Building and executing .bat files for georeferencing raw processed images','section')
 
-% Split the EO files into individual tracks 
-cleanEOfile(EOpath,EOdir,tracks,D);
+display_text('Step 5: Building and executing .bat files for georeferencing processed images','section')
 
-%--- Build .bat file for the image ---%
+%--- Build batch file for georeferencing images ---%
 
 % Loop through tracks
 for i=1:length(tracks)
@@ -211,17 +215,17 @@ for i=1:length(tracks)
         yy=mean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),2),'omitnan');
         [proj_lat,proj_lon]=utm2deg(xx,yy,utmZone);
         
-        % Set the paths to nongeoreferenced images to be processed and 
-        % output directory for georeferenced images 
-        dirin_img = [dirProc 'nongeoreferenced_Images_With_Vignetting_Removed\Track_' num2str(i) '\']; %directory of all tif imagery to use for this single flight
+        % Set the paths to nongeoreferenced images and the output directory
+        % for post-processed georeferenced images 
+        dirin_img = [dirProc 'nongeoreferenced_Images_With_Vignetting_Removed\Track_' num2str(i) '\']; 
         dirin_prj = dirProc;
         
-        % Build .bat file for running trimble georeferencing project 
+        % Build batch file for running trimble georeferencing project 
         buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,i,camName);
     end
 end
 
-%--- Build .bat file for the high glint mask image ---%
+%--- Build batch file for georeferencing images for identifying high glint regions ---%
 
 % Loop through tracks 
 for i=1:length(tracks)
@@ -237,15 +241,15 @@ for i=1:length(tracks)
         
         % Set the paths to masks for determing high glint and output
         % directory for georeferenced masks
-        dirin_img = [dirProc 'mask_For_Determining_High_Glint_Areas\Track_' num2str(i) '\']; %directory of all tif imagery to use for this single flight
+        dirin_img = [dirProc 'mask_For_Determining_High_Glint_Areas\Track_' num2str(i) '\'];
         dirin_prj = dirProc;
         
-        % Build .bat file for running trimble georeferencing project
+        % Build batch file for running trimble georeferencing project
         buildBatMask(dirin_img,dirin_prj,proj_lat,proj_lon,i,camName);
     end
 end
 
-%--- Execute .bat files ---%
+%--- Execute batch files ---%
 
 % Loop through tracks 
 for i=1:length(tracks)
@@ -256,7 +260,7 @@ for i=1:length(tracks)
         % Obtain file name of .bat file  
         fileNN=dir([dirProc 'Project\Track_' num2str(i) '\' '*.bat']);
         
-        % Execute .bat file for trimble georeferencing image project
+        % Execute batch file for trimble georeferencing image project
         system([dirProc 'Project\Track_' num2str(i) '\' fileNN.name]);
 
     end
@@ -271,7 +275,7 @@ for i=1:length(tracks)
         % Obtain file name of .bat file
         fileNN=dir([dirProc 'Project\TrackMask_' num2str(i) '\' '*.bat']);
         
-        % Execute .bat file for trimble georeferencing mask project
+        % Execute batch file for trimble georeferencing mask project
         system([dirProc 'Project\TrackMask_' num2str(i) '\' fileNN.name]);
 
     end
@@ -297,17 +301,6 @@ else
 end
 
 % Slight variation on Jessica's method
-
-% Loop through tracks
-for i=1:length(tracks)
-    N2=mean(N(i).hi);
-    N_CS=cumsum(N2(200:500));
-    N_CS=N_CS/max(N_CS,[],'omitnan');
-    N_CS=1-N_CS;
-    ind1=find(N_CS<0.5,1,'first');
-    [res_x, idx_of_result]=knee_pt(N_CS(ind1:301),ind1:301);
-    Threshold(i).th(:)=10000;                                               %(199+ind1+idx_of_result)*16;
-end
 
 % Loop through tracks
 for i=1:length(tracks)
@@ -352,14 +345,8 @@ if option_plot
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Start running the code for determining Lambda and wc coverage
+%% Start running the code for determining Lambda and white cap coverage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%new - 0 
-%new2 - 10
-%new3 - 5
-%new4 - 15
-%
 
 % v3 - portion of image v4- portion, 30cm v5 - old processing portion of
 % image

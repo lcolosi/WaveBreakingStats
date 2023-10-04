@@ -31,8 +31,8 @@ Estimating $\Lambda(c)$ distribution includes the following steps:
 1. `StartDate` : Start date of flight in UTC time (format: 'yyyymmdd')
 
 ### Directories
-1. `dirRaw` : Path to the directory containing Raw (non-georeferenced) video images for a given flight. These are usually located in the `Images\` directory of the Trimble project. 
-2. `dirProc` : Path to the directory containing the Trimble project directories and files. The Trimble project directories include `EO\`, `Images\`, `Output\`, `Project\`, and `Template\`. 
+1. `dirRaw` : Path to the directory containing Raw (non-georeferenced) video images for a given flight. These are usually located in the Images\ directory of the Trimble project. 
+2. `dirProc` : Path to the directory containing the Trimble project directories and files. The Trimble project directories include EO\, Images\, Output\, `Project\, and Template\. 
 3. `dirV` : Path to the directory where quality control/verification plots are saved.
 4. `dirOut` : Path to the directory where intermediate data products (e.g., .mat files) are saved.
 

@@ -1,7 +1,7 @@
-function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
+function plotOutTracks(A,tracks,trackTag,dirTS,An,sc,utc_time,StartDate,utmZone)
 
     %%%%
-    % plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
+    % plotOutTracks(A,tracks,trackTag,dirTS,An,sc,utc_time,StartDate,utmZone)
     %
     % Plotting function which generates the following figures:  
     %   (1) The trajectory of all flight tracks on a lat-lon grid in movie
@@ -43,8 +43,6 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
     %   dirTS    : Path to directory where figures will be saved.  
     %   An       : Cropped GPSTime station cell array containing the time 
     %              (UTC), track number, and image number.
-    %   dirProc  : Path to Trimble processed (georeferenced) video images 
-    %              for a given flight
     %   sc       : Stability criteria matrix which contains the criteria for the
     %              standard deviation for the roll, pitch, and heading (sigRoll,
     %              sigPitch, sigHeading respectively) as well as the number of
@@ -54,15 +52,11 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
     %                     sc = [sigRoll,sigPitch,sigHeading,Nstd];
     %   utc_time  : UTC time in a datenum array.    
     %   StartDate : Start date string of flight in UTC in 'yyyymmdd' format. 
+    %   utmZone   : UTM zone for experimental site as a string. 
     % 
     %   Returns
     %   -------
-    %   All figures are saved to the dirTS directory.  
-    % 
-    %   Notes
-    %   -----
-    %   This functions requires the mapping toolbox to access projinv and
-    %   geotiffinto functions.  
+    %   All figures are saved to the dirTS directory.   
     %
     %%%%
     
@@ -71,18 +65,6 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
     font = 'times';
     cm=flipud(cbrewer2('RdYlBu',length(tracks)));                           % Colormap denoting the flight tracks. 
     gray = [0.5,0.5,0.5];
-
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% Obtain UTM coordinate info for projection to lat/lon grid 
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Set path to processed visible images files orgainzed by track
-    dirProcessed=[dirProc 'Output\'];
-
-    % Obtain filenames of of geotiff files fromtrack 1
-    D_Im2=dir([dirProcessed 'Track_' num2str(1) '\' '*.tif']);
-
-    % Grab image properties for one of the geotiff files
-    proj=geotiffinfo([dirProcessed 'Track_' num2str(1) '\' D_Im2(1).name]);
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% Find max and min lat and lon of all tracks
@@ -91,20 +73,24 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
     % Loop through tracks
     for i=1:length(tracks)
 
-        % Obtain time indicies for ith flight track
-        indicesPlot=tracks(i).Indices(1):1:tracks(i).Indices(2);
+        % Check if time indicies for ith track are empty
+        if ~isempty(tracks(i).Indices)
 
-        % Project UTM coorindates onto longitude and latitude grid (units: decimal degree)
-        [latTemp,lonTemp]=projinv(proj,A.data(indicesPlot,1),A.data(indicesPlot,2));
-
-        % Find longitude and latitude max and min for ith track and 
-        % compare to previous flight tracks
-        if i == 1
-            lonMax=max(lonTemp,[],'all','omitnan'); latMax=max(latTemp,[],'all','omitnan');
-            lonMin=min(lonTemp,[],'all','omitnan'); latMin=min(latTemp,[],'all','omitnan');
-        else 
-            lonMax=max([lonMax,max(lonTemp,[],'all','omitnan')]); latMax=max([latMax,max(latTemp,[],'all','omitnan')]);
-            lonMin=min([lonMin,min(lonTemp,[],'all','omitnan')]); latMin=min([latMin,min(latTemp,[],'all','omitnan')]);
+            % Obtain time indicies for ith flight track
+            indicesPlot=tracks(i).Indices(1):1:tracks(i).Indices(2);
+    
+            % Project UTM coorindates onto longitude and latitude grid (units: decimal degree)
+            [latTemp, lonTemp] = utm2deg(A.data(indicesPlot,1),A.data(indicesPlot,2), repmat(utmZone, length(A.data(indicesPlot,1)), 1));
+    
+            % Find longitude and latitude max and min for ith track and 
+            % compare to previous flight tracks
+            if i == 1
+                lonMax=max(lonTemp,[],'all','omitnan'); latMax=max(latTemp,[],'all','omitnan');
+                lonMin=min(lonTemp,[],'all','omitnan'); latMin=min(latTemp,[],'all','omitnan');
+            else 
+                lonMax=max([lonMax,max(lonTemp,[],'all','omitnan')]); latMax=max([latMax,max(latTemp,[],'all','omitnan')]);
+                lonMin=min([lonMin,min(lonTemp,[],'all','omitnan')]); latMin=min([latMin,min(latTemp,[],'all','omitnan')]);
+            end
         end
     end
 
@@ -132,36 +118,35 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
         % Check if time indicies for ith track are empty
         if ~isempty(tracks(i).Indices)
         
-        % Obtain time indicies for ith flight track     
-        indicesPlot=tracks(i).Indices(1):1:tracks(i).Indices(2);
-
-        % Project UTM coorindates onto longitude and latitude grid (units: decimal degree)
-        [lat,lon] = projinv(proj,A.data(indicesPlot,1),A.data(indicesPlot,2));
-        
-        % Plot ith track trajectory
-        if i == 1
-            geoscatter(lat,lon,30,cm(i,:),'o','filled');
-        else 
-            hold on 
-            geoscatter(lat,lon,30,cm(i,:),'o','filled');
-        end
-
-        % Label ith flight track
-        text(max(lat(1)+0.01),max(lon(1)-0.001),num2str(i),'color',cm(i,:),'FontName',font,'fontsize',fontsize)
-        
-        % Set figure attributes
-        geobasemap satellite
-        geolimits([latMin latMax],[lonMin lonMax])
-        gx = gca; 
-        gx.TickLabelFormat = '-dd';
-        gx.LongitudeLabel.String = 'Longitude'; 
-        gx.LatitudeLabel.String = 'Latitude';
-        set(gx,'fontname',font,'FontSize',fontsize,'tickdir','both')
-
-        % Set frame and write to video file
-        frame = getframe(gcf);
-        writeVideo(writerObj,frame)
-
+            % Obtain time indicies for ith flight track     
+            indicesPlot=tracks(i).Indices(1):1:tracks(i).Indices(2);
+    
+            % Project UTM coorindates onto longitude and latitude grid (units: decimal degree)
+            [lat, lon] = utm2deg(A.data(indicesPlot,1),A.data(indicesPlot,2), repmat(utmZone, length(A.data(indicesPlot,1)), 1));
+            
+            % Plot ith track trajectory
+            if i == 1
+                geoscatter(lat,lon,30,cm(i,:),'o','filled');
+            else 
+                hold on 
+                geoscatter(lat,lon,30,cm(i,:),'o','filled');
+            end
+    
+            % Label ith flight track
+            text(max(lat(1)+0.01),max(lon(1)-0.001),num2str(i),'color',cm(i,:),'FontName',font,'fontsize',fontsize)
+            
+            % Set figure attributes
+            geobasemap satellite
+            geolimits([latMin latMax],[lonMin lonMax])
+            gx = gca; 
+            gx.TickLabelFormat = '-dd';
+            gx.LongitudeLabel.String = 'Longitude'; 
+            gx.LatitudeLabel.String = 'Latitude';
+            set(gx,'fontname',font,'FontSize',fontsize,'tickdir','both')
+    
+            % Set frame and write to video file
+            frame = getframe(gcf);
+            writeVideo(writerObj,frame)
         end
     end
     
@@ -181,7 +166,7 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
 
     % Loop through tracks
     for i=1:length(tracks)
-
+        
         % Check if time indicies for ith track are empty 
         if ~isempty(tracks(i).Indices)
             
@@ -216,7 +201,7 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % Loop through tracks 
-    for i=1:length(tracks)
+    for i= 1:length(tracks)
         
         % Check if time indicies for ith track are empty 
         if ~isempty(tracks(i).Indices)
@@ -252,8 +237,8 @@ function plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate)
             subplot(5,1,[1 2])
 
                 % Project UTM coorindates onto longitude and latitude grid (units: decimal degree)
-                [lat_ft,lon_ft] = projinv(proj,A.data(indicesFT,1),A.data(indicesFT,2));
-                [lat_ct,lon_ct] = projinv(proj,A.data(indicesCT,1),A.data(indicesCT,2));
+                [lat_ft,lon_ft] = utm2deg(A.data(indicesFT,1),A.data(indicesFT,2), repmat(utmZone, length(A.data(indicesFT,1)), 1));
+                [lat_ct,lon_ct] = utm2deg(A.data(indicesCT,1),A.data(indicesCT,2), repmat(utmZone, length(A.data(indicesCT,1)), 1));
         
                 % Get max and mins and add 0.05 decimal degrees
                 lonmaxTemp = max(lon_ft,[],'all','omitnan')+0.01; latmaxTemp = max(lat_ft,[],'all','omitnan')+0.01;

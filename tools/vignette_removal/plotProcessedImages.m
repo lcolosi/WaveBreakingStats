@@ -69,7 +69,7 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
 
     % Loop through tracks 
-    for i=1 %1:length(tracks)
+    for i=5 %1:length(tracks)
         
         % Check if track is stable and if full track has start and end time
         % indices

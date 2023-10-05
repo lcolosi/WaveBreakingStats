@@ -92,11 +92,11 @@ function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,
     
     % Initialize parallel computing if parallel computing is not already
     % running
-    if isempty(gcp('nocreate'))
+    if isempty(gcp('nocreate'))                                             % || gcp('nocreate').NumWorkers < feature('numcores')
 
         % Set the number of CPU cores (i.e., the brains of the CPU that recieve
         % and execute operations for your computer) 
-        numCores=6;
+        numCores=feature('numcores');
     
         % Run code on parallel pools for increases efficiency
         poolobj = parpool(numCores);
@@ -119,7 +119,7 @@ function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,
     f = waitbar(0,'Please wait...','Position', [pos(1) pos(2)+2*pos(4) pos(3) pos(4)]);
 
     % Loop through tracks 
-    for i=2 %1:length(tracks_Im)
+    for i=5 %1:length(tracks_Im)
 
         % Update waitbar
         waitbar(i/length(tracks_Im),f,...

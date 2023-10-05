@@ -48,8 +48,13 @@ function tracks = DefineTracks(An)
         startI=find(i==Indices,1,'first');
         endI=find(i==Indices,1,'last');
 
-        % Save start and end time indicies in tracks structure
-        tracks(i).Indices=[startI endI];
+        % Save start and end time indicies in tracks structure if track is
+        % greater than one time step
+        if startI ~= endI
+            tracks(i).Indices=[startI endI];
+        else
+            tracks(i).Indices = [];
+        end
     end
 
 end

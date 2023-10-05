@@ -65,8 +65,13 @@ function tracks_Im = DefineTracksIm(D_Im,tracks)
         % Index of the last occurence of the ith track 
         endI=find(i==Indices,1,'last');
         
-        % Save start and end indices for the ith track. 
-        tracks_Im(i).Indices=[startI endI];
+        % Save start and end time indicies for ith track if track is
+        % greater than one time step
+        if startI ~= endI
+            tracks_Im(i).Indices=[startI endI];
+        else
+            tracks_Im(i).Indices = [];
+        end
     end
     
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

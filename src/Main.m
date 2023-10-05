@@ -15,19 +15,22 @@ display_text('Step 1: Setting input parameters.','section')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Select process to run (0 or 1)
-option_plot          = 0; 
+option_plot          = 1; 
 option_eo_split      = 0;
-option_image_proc    = 0;                                                   
+option_image_proc    = 1;                                                   
 option_globalOrlocal = 1;                                                 
 
+% Experiment title
+exp = 'SMODE IOP1';
+
 % Start date of flight in UTC time
-StartDate = '20210519';                                                    
+StartDate = '20221016';                                                    
 
 % Directories
-dirRaw = 'X:\\TFO_2021\Processed\VIDEO\16bit_TIF_Frames\20210519\';         
-dirProc = 'X:\\TFO_2021\Processed\VIDEO\Trimble\20210519\';                 
-dirV = 'D:\DEPLOYMENTS\TFO_2021\figs\video\Quality_Control\20210519\';      
-dirOut = 'D:\DEPLOYMENTS\TFO_2021\data\video\Intermediate_Products\20210519\'; 
+dirRaw = 'W:\\SMODE_2022\RAW\VIDEO\Frames\20221016_1\Images\';         
+dirProc = 'W:\\SMODE_2022\RAW\VIDEO\Frames\20221016_1\';                  
+dirV = 'W:\\SMODE_2022\RAW\VIDEO\Frames\20221016_1\QC_Plots\';      
+dirOut = 'W:\\SMODE_2022\PROCESSED\VIDEO\20221016_1\'; 
 
 % Flight stability criteria parameters
 maxPer = [25 25];                                                           
@@ -58,6 +61,7 @@ peakPercentage=20;
 % Set text interpreter
 set_interpreter('latex')
 
+display_text(['Experiment: ' exp],'body')
 display_text(['Date: ' StartDate(end-3:end-2) '/' StartDate(end-1:end) '/' StartDate(1:4)],'body')
 display_text('Done!','body')
 
@@ -65,19 +69,14 @@ display_text('Done!','body')
 %% Import EO data and determine time indices of each track in the EO file
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
-display_text('Step 2: Loading EO data and identifing flight tracks.','section')
-
-% Identify that EO files are processed through Trimble
-if isfolder([dirProc 'EO'])
-    movefile([dirProc 'EO'],[dirProc 'Trimble_EO']);
-end
+display_text('Step 2: Importing EO data and identifing flight tracks.','section')
 
 % Obtain filenames of all EO files 
-D = dir([dirProc 'Trimble_EO\' '*EO.txt']);
+D = dir([dirProc 'EO\' '*EO.txt']);
 
 % Set path to EO file and its directory  
-EOpath = [dirProc 'Trimble_EO\' D(1).name];
-EOdir = [dirProc 'Trimble_EO\'];
+EOpath = [dirProc 'EO\' D(1).name];
+EOdir = [dirProc 'EO\'];
 
 % Obtain number of lines in the EO text file header 
 Counter = HeaderPosition(EOpath,'(sec)');
@@ -127,7 +126,7 @@ if option_plot == 1
     sc = [sigRoll,sigPitch,sigHeading,Nstd];
 
     % Generate plots
-    plotOutTracks(A,tracks,trackTag,dirTS,An,dirProc,sc,utc_time,StartDate);
+    plotOutTracks(A,tracks,trackTag,dirTS,An,sc,utc_time,StartDate,utmZone);
 end
 
 display_text('Done!','body')
@@ -148,16 +147,16 @@ tracks_Im = DefineTracksIm(D_Im,tracks);
 if option_image_proc == 1
 
     % Create a subdirectory for intermediate image products
-    dirVR=[dirOut 'nongeoreferenced_images_with_Vignetting_Removed\'];
+    dirVR=[dirProc '\Images\Intermediate_Products\nongeoreferenced_images_with_Vignetting_Removed\'];
     if ~exist(dirVR, 'dir'), mkdir(dirVR); end
-    dirMGlint=[dirOut 'mask_for_Determining_High_Glint_Areas\'];
+    dirMGlint=[dirProc '\Images\Intermediate_Products\mask_for_Determining_High_Glint_Areas\'];
     if ~exist(dirMGlint, 'dir'), mkdir(dirMGlint); end
 
     % Compute the mean brightness and standard deviation of each track
     [meanIm,stdIm,RM_Nr,meanOriginal]=getImMeanStd(dirRaw,D_Im,tracks_Im,trackTag,tracks,winSize,sigma_ff_m,B_threshold,n_sigma);
     
     % Save output from getImMeanStd 
-    save([dirOut 'mean_Images_Per_Track.mat'],'meanIm','stdIm','RM_Nr','meanOriginal');
+    save([dirProc '\Images\Intermediate_Products\mean_Images_Per_Track.mat'],'meanIm','stdIm','RM_Nr','meanOriginal');
     
     % Remove vignetting and equalize raw nongeoreferenced image; save 
     % intermediate products to dirVR
@@ -172,17 +171,18 @@ if option_image_proc == 1
     [Glint]=det_glint(meanIm,stdMag,tracks,trackTag);
 
     % Save output from det_glint 
-    save([dirOut 'glint_threshold_Per_Track.mat'],'Glint','Glint_mask');
+    save([dirProc '\Images\Intermediate_Products\glint_threshold_Per_Track.mat'],'Glint','Glint_mask');
 
 else 
     
     % Load mean brightness and standard deviation imagesand glint threshold
-    load([dirOut 'mean_Images_Per_Track.mat'])
-    load([dirOut 'glint_threshold_Per_Track.mat'])
+    load([dirProc '\Images\Intermediate_Products\mean_Images_Per_Track.mat'])
+    load([dirProc '\Images\Intermediate_Products\glint_threshold_Per_Track.mat'])
 
 end
 
-% Plot 
+% Plot mean pixel brightness and its standard deviation for each track and 
+% show examples of cropping high glint regions 
 if option_plot == 1
 
     % Create a subdirectory for vignette removal plots
@@ -427,10 +427,7 @@ addpath('utilities')
 
 dirV2=[dirProc 'Plots\DistributionsAll_new\'];
 if ~exist(dirV2, 'dir'), mkdir(dirV2); end
-%new - 0 
-%new2 - 10
-%new3 - 5
-%new4 - 15
+
 for i=11:1:11%1:length(tracks)
     i
     if trackTag(i).stable==1
@@ -500,11 +497,15 @@ plotAll_TFO(dirV2,trackTag,StartTime,tracks,An,Hs_all,freq_all,ustar);
 
 %plotDists();
 
-%% Development Code
+%% Deelopment Code
 
 % Load buoy positions
 % load('D:\MASS\Processed\L_Computations\L_Computations\Test\TFOEx21_DEP01_BuoyGPS.mat')
 
+% Identify that EO files are processed through Trimble
+% if isfolder([dirProc 'EO'])
+%     movefile([dirProc 'EO'],[dirProc 'Trimble_EO']);
+% end
 
 
 

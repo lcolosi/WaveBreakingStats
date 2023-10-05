@@ -3,32 +3,58 @@ function buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,trackNr,camName)
     %%%%
     % buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,trackNr,camName)
     %
-    % Function for generating Trimble georeferencing batch file.    
+    % Function for generating Trimble georeferencing batch file for a 
+    % single flight or flight track.    
     %
     %   Parameters
     %   ---------- 
-    %   dirin_img :  
-    %   dirin_prj : 
+    %   dirin_img : Path to nongeoreferenced images.    
+    %   dirin_prj : Path to Trimble project directories (the directory 
+    %               containing EO, Images, Output, Project, Template).
     %   proj_lat  : Project area's mean latitude in decimal degree units. 
     %   proj_lon  : Project area's mean longitude in decimal degree units.
-    %   trackNr   :
-    %   camName   : Camera name as a string. Current camera options are 'jai', 'flare', 'sc6000', 'sc6700', 'd810', 'doppvis'
+    %   trackNr   : Scalar track number that specifies which track will be
+    %               georeferenced.  
+    %   camName   : Camera name as a string. Current camera options are: 
+    %               'jai', 'flare', 'sc6000', 'sc6700', 'd810', 'doppvis'
     % 
     %   Returns
     %   -------
     %  
     % 
-    %   Notes 
-    %   -----
+    %   Instructions from Nick 
+    %   ----------------------
+    %   Prior to running this script, find the Trimble XML and PRJ files 
+    %   from the boresight (usually on airseaserver19). From these files 
+    %   you will need to make a template versions with flight-specific
+    %   information not included but boresight information included 
+    %   (Nick S. may have already done this, so check template directory
+    %   first). You can check template versions for earlier sets of
+    %   projects to get an idea of what lines you will need.
+    %   
+    %   Also you will need to setup all the correct directory structure
+    %   for the script and batch processing to run properly. For each 
+    %   flight date you will need the following folders: 
+    %       (1) EO (with *EO.txt file) 
+    %       (2) Images (with cropped images) 
+    %       (3) Output
+    %       (4) Project 
+    %       (5) Templates (with *Template.xml and *Template.prj files)
+    %   Note: These subdirectories are located inside the dirin_prj
+    %   directory.
+    % 
+    %   NODES explanation:
+    %       (1) NODE1: Set inputs (automated here), EO file extraction,
+    %                  average altitude and resolution calculation, and
+    %                  project summary creation
+    %       (2) NODE2: Applications Master PRJ File Generation
+    %       (3) NODE3: Orthomaster XML File Generation
+    %       (4) NODE4: Batch File Generation  
+    %  
+    %   
     %   !!!!!!!!!!!!!!!!!!!!!!!!!! added 10 to resolution
     %%%%
     
-    %User Input File Information for a single flight. Each flight should have subdirectories EO (with *EO.txt file), Templates (with *Template.xml and *Template.prj files), Project, and Output
-    % dirin_img = 'D:\MASS\RAW\LCDRI_2017\VIDEO\TIFF_16BIT_EXPORT\20170323\'; %directory of all tif imagery to use for this single flight
-    % dirin_prj = 'D:\MASS\Processed\LCDRI_2017\VIDEO\20170323\';
-    
-    % dirin_img = 'D:\MASS\RAW\LCDRI_2017\VIDEO\TIFF_16BIT_EXPORT\20170323N\'; %directory of all tif imagery to use for this single flight
-    % dirin_prj = 'D:\MASS\Processed\LCDRI_2017\VIDEO\20170323N\';
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %% 1st NODE: Inputs, EO file extraction, average altitude and resolution, and project summary
@@ -37,48 +63,55 @@ function buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,trackNr,camName)
     %--- User Inputs ---% 
 
     % Constants
-    msl = egm96geoid(proj_lat,proj_lon);                                    % Mean sea level (msl) with respect to the ellipsoid at the prescribed location (overwrite orthometric height for terrestrial values that are above the mean sea level)
-    cam = camName;                                                          % Camera name 
+    msl = egm96geoid(proj_lat,proj_lon);                                    % Mean sea level with respect to the ellipsoid at the prescribed location (overwrite orthometric height for terrestrial values that are above the mean sea level)
+    cam = camName;                                                          
 
-    % Directory Info
-    eoName   = ['_' num2str(trackNr) '_EO.txt'];
-    file_eo  = dir([dirin_prj 'Trimble_EO\' '*' '_' num2str(trackNr) '_EO.txt']); % Full directory of EO file exported from Inertial Explorer for all image frames
+    % Directories
+    eoName   = ['_' num2str(trackNr) '_EO.txt'];                                  
+    file_eo  = dir([dirin_prj 'EO\' '*' '_' num2str(trackNr) '_EO.txt']);   % Directory of EO file exported from Inertial Explorer for track number trackNr
     temp_xml = dir([dirin_prj 'Template\*Template.xml']);                   % Orthomaster XML template file for this particular installation / set of flights
     temp_prj = dir([dirin_prj 'Template\*Template.prj']);                   % Project template file for this particular installation /set of flights. Derived from manual boresight project file
     
+    % Set Project and XML file location
     dirV=[dirin_prj 'Project\Track_' num2str(trackNr) '\'];
     if ~exist(dirV, 'dir'), mkdir(dirV); end
-    dirout_prj_xml =     dirV; %Project and XML file location
+    dirout_prj_xml = dirV; 
     
+    % Set Orthomaster output directory (where we will save georeferenced
+    % images)
     dirV=[dirin_prj 'Output\Track_' num2str(trackNr) '\'];
     if ~exist(dirV, 'dir'), mkdir(dirV); end
-    dirout_ortho =       dirV; %Orthomaster output directory
+    dirout_ortho = dirV; 
     
-    %End User Inputs. Now Retrieve File Info
+    % End User Inputs. Now Retrieve image and EO file Info
     filelist = dir([dirin_img '*.tif']);
     ind = strfind(file_eo.name,'_');
-    proj_str = file_eo.name(1:ind(2)); %'yyyymmdd_proj_' used for file naming where proj is the project acronym that was used
+    proj_str = file_eo.name(1:ind(2));                                      %'yyyymmdd_proj_' used for file naming where proj is the project acronym that was used (e.g., SMODE or TFO)
     
-    %Read EO file and extract data, skipping over variable header line length, and sort rows into order by vl/frame
-    fid = fopen([dirin_prj 'Trimble_EO\' file_eo.name]);line = '';num=0;
+    % Read EO file and extract data, skipping over variable header line length, and sort rows into order by vl/frame
+    fid = fopen([dirin_prj 'EO\' file_eo.name]);line = '';num=0;
     while ~contains(line,'(sec)')
         num=num+1;
         line = fgetl(fid);
     end
     EO_file = textscan(fid,'%f MASS_VIDEO_%d_%d %f %f %f %f %f %f');
     fclose(fid);
-    [EO.vl,index] = sortrows(EO_file{:,2}); EO.time = EO_file{:,1}(index); EO.frame = EO_file{:,3}(index);
+
+    % Move data to EO structure and clear EO_file
+    [EO.vl,index] = sortrows(EO_file{:,2}); 
+    EO.time = EO_file{:,1}(index); EO.frame = EO_file{:,3}(index);
     EO.east = EO_file{:,4}(index); EO.north = EO_file{:,5}(index); EO.alt = EO_file{:,6}(index);
-    EO.omega = EO_file{:,7}(index); EO.phi = EO_file{:,8}(index); EO.kappa = EO_file{:,9}(index);clear EO_file
+    EO.omega = EO_file{:,7}(index); EO.phi = EO_file{:,8}(index); EO.kappa = EO_file{:,9}(index);
+    clear EO_file
     
-    %Compute an average altitude above MSL for each VL file
-    EO.strips(:,1) = unique(EO.vl); %Number of Trimble strips (or individual vl files) 
+    % Compute an average altitude above MSL for each VL file
+    EO.strips(:,1) = unique(EO.vl);                                         % Number of Trimble strips (or individual vl files) 
     for mm = 1:length(EO.strips)
         ind_vl = find(EO.strips(mm)==EO.vl);
         EO.alt_avg(ind_vl,1) = mean(EO.alt(ind_vl))-msl;
     end
     
-    %Compute average cross track resolution for a given camera for each strip/vl file and then compute the nearest 5cm export size for each strip/vl file
+    % Compute average cross track resolution for a given camera for each strip/vl file and then compute the nearest 5cm export size for each strip/vl file
     if strcmp(cam,'jai')
         dw_x = 18.13; fl = 14; pix_x = 3296; fov_x = 2*atan(dw_x/(2*fl))*180/pi; swath_x = 2*tan(fov_x/2*pi/180)*EO.alt_avg; EO.res_x(:,1) = swath_x/pix_x;
     elseif strcmp(cam,'flare')
@@ -312,5 +345,13 @@ function buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,trackNr,camName)
 
 end
 
+%% Developmental code
+
+% User Input File Information for a single flight. Each flight should have subdirectories EO (with *EO.txt file), Templates (with *Template.xml and *Template.prj files), Project, and Output
+% dirin_img = 'D:\MASS\RAW\LCDRI_2017\VIDEO\TIFF_16BIT_EXPORT\20170323\'; %directory of all tif imagery to use for this single flight
+% dirin_prj = 'D:\MASS\Processed\LCDRI_2017\VIDEO\20170323\';
+
+% dirin_img = 'D:\MASS\RAW\LCDRI_2017\VIDEO\TIFF_16BIT_EXPORT\20170323N\'; %directory of all tif imagery to use for this single flight
+% dirin_prj = 'D:\MASS\Processed\LCDRI_2017\VIDEO\20170323N\';
 
 

@@ -5,8 +5,6 @@
 % See Github repo (https://github.com/lcolosi/WaveBreakingStats/src/README.md) 
 % for documentation.
 
-% !!! Important !!! : Run matlab as an Adminstrator
-
 clc, clearvars -except meanIm stdIm RM_Nr meanOriginal Glint , close all
 
 display_text('Estimating Lambda of c distributions.','title')
@@ -506,7 +504,7 @@ plotAll_TFO(dirV2,trackTag,StartTime,tracks,An,Hs_all,freq_all,ustar);
 
 %plotDists();
 
-%% Deelopment Code
+%% Development Code
 
 % Load buoy positions
 % load('D:\MASS\Processed\L_Computations\L_Computations\Test\TFOEx21_DEP01_BuoyGPS.mat')

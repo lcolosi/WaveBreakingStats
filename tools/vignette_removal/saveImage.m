@@ -1,7 +1,7 @@
-function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma,meanIm,stdIm,meanOriginal,sigBrightness)
+function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirout,sigma_ff,n_sigma,meanIm,stdIm,meanOriginal,sigBrightness)
 
     %%%%
-    % saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma,meanIm,stdIm,meanOriginal,sigBrightness)
+    % saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirout,sigma_ff,n_sigma,meanIm,stdIm,meanOriginal,sigBrightness)
     %
     % Function for removing vingetting and equalizing images along a 
     % full flight track. Vignetting is removed using a flat field 
@@ -44,7 +44,7 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma
     %   tracks    : Structure containing the start and end time indices of
     %               each full flight track (located in the indices field).
     %               Indices derived from EO file.
-    %   dirOut    : Path to directory for saving intermediate data products.
+    %   dirout    : Path to directory for saving intermediate data products.
     %   sigma_ff  : Standard deviation of the Gaussian smoothing filter
     %               for the 2D image flate field correction and the 2D 
     %               Gaussian filtering of the squared deviations from the
@@ -74,7 +74,7 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma
     % 
     %   Returns
     %   -------
-    %   Saves the equalized images in the directory specified by dirOut. 
+    %   Saves the equalized images in the directory specified by dirout. 
     %  
     % 
     %%%%
@@ -85,7 +85,7 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma
 
         % Set the number of CPU cores (i.e., the brains of the CPU that recieve
         % and execute operations for your computer) 
-        numCores=feature('numcores');
+        numCores= 10; %feature('numcores');
     
         % Run code on parallel pools for increases efficiency
         poolobj = parpool(numCores);
@@ -93,7 +93,7 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma
     else
 
         % Initialize an empty poolobj
-        poolobj = [];
+        poolobj = gcp('nocreate');
 
     end
 
@@ -130,7 +130,7 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma
             medianStd=median(stdIm_temp(:));
             
             % Create a subdirectory for image output after processing
-            dirV=[dirOut 'Track_' num2str(i) '\'];
+            dirV=[dirout 'Track_' num2str(i) '\'];
             if ~exist(dirV, 'dir'), mkdir(dirV); end
 
             % Generate waitbar
@@ -153,7 +153,7 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma
                 a=double(im2gray(a));
 
                 %--- Approach 1: Variable lighting conditions along track ---%
-                if std(meanOriginal) >= sigBrightness
+                if std(meanOriginal(i).nr) >= sigBrightness                 %#ok
 
                     % Preform a flat-field correction (helps remove vignetting)
                     a2=imflatfield(a,sigma_ff);
@@ -214,7 +214,8 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirOut,sigma_ff,n_sigma
         end
     end
 
-    % End parallel computing session
+    % End parallel computing session and close wait bar
     delete(poolobj)
+    close(f)
 
 end

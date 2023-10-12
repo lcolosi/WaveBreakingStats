@@ -5,7 +5,9 @@
 % See Github repo (https://github.com/lcolosi/WaveBreakingStats/src/README.md) 
 % for documentation.
 
-clc, clearvars, close all
+% !!! Important !!! : Run matlab as an Adminstrator
+
+clc, clearvars -except meanIm stdIm RM_Nr meanOriginal Glint , close all
 
 display_text('Estimating Lambda of c distributions.','title')
 display_text('Step 1: Setting input parameters.','section')
@@ -15,9 +17,10 @@ display_text('Step 1: Setting input parameters.','section')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Select process to run (0 or 1)
-option_plot          = 1; 
+option_plot          = 0; 
 option_eo_split      = 0;
-option_image_proc    = 1;                                                   
+option_image_proc    = 0;  
+option_build_bat     = 1;
 option_globalOrlocal = 1;                                                 
 
 % Experiment title
@@ -30,7 +33,7 @@ StartDate = '20221016';
 dirRaw = 'W:\\SMODE_2022\RAW\VIDEO\Frames\20221016_1\Images\';         
 dirProc = 'W:\\SMODE_2022\RAW\VIDEO\Frames\20221016_1\';                  
 dirV = 'W:\\SMODE_2022\RAW\VIDEO\Frames\20221016_1\QC_Plots\';      
-dirOut = 'W:\\SMODE_2022\PROCESSED\VIDEO\20221016_1\'; 
+dirOut = 'W:\\SMODE_2022\PROCESSED\VIDEO\20221016_1\';
 
 % Flight stability criteria parameters
 maxPer = [25 25];                                                           
@@ -50,8 +53,8 @@ B_threshold = 0.8;
 n_sigma = 5;                                                                
 stdMag=-0.1;                                                                
 
-% Trimble georeferencing project parameters 
-camName = 'flare';                                                         
+% Trimble georeferencing project parameters  
+res = 5;                        
 utmZone='10 N';                                                            
 
 % Brightness threshold parameters
@@ -160,7 +163,7 @@ if option_image_proc == 1
     
     % Remove vignetting and equalize raw nongeoreferenced image; save 
     % intermediate products to dirVR
-    saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirVR,sigma_ff_v,n_sigma,meanOriginal,sigBrightness);
+    saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirVR,sigma_ff_v,n_sigma,meanIm,stdIm,meanOriginal,sigBrightness);
     
     % Save normalized image for detecting high sun glint areas; save 
     % intermediate products to dirMGlint
@@ -171,9 +174,11 @@ if option_image_proc == 1
     [Glint]=det_glint(meanIm,stdMag,tracks,trackTag);
 
     % Save output from det_glint 
-    save([dirProc '\Images\Intermediate_Products\glint_threshold_Per_Track.mat'],'Glint','Glint_mask');
+    save([dirProc '\Images\Intermediate_Products\glint_threshold_Per_Track.mat'],'Glint');
 
-else 
+elseif isempty(whos('meanIm')) || isempty(whos('stdIm')) ||...
+       isempty(whos('RM_Nr')) || isempty(whos('meanOriginal')) ||...
+       isempty(whos('Glint'))
     
     % Load mean brightness and standard deviation imagesand glint threshold
     load([dirProc '\Images\Intermediate_Products\mean_Images_Per_Track.mat'])
@@ -198,54 +203,58 @@ display_text('Done!','body')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Build and execute .bat file for georeferencing processed images with Trimble 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-
+close all
 display_text('Step 5: Building and executing .bat files for georeferencing processed images','section')
 
-%--- Build batch file for georeferencing images ---%
+% Build batch files
+if option_build_bat == 1
 
-% Loop through tracks
-for i=1:length(tracks)
+    %--- Build batch file for georeferencing images ---%
 
-    % Check if track is stable
-    if trackTag(i).stable==1
-
-        % Compute mean northing and easting UTM coordinate of ith track and
-        % convert it to decimal degree longitude and latitude
-        xx=mean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),1),'omitnan');
-        yy=mean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),2),'omitnan');
-        [proj_lat,proj_lon]=utm2deg(xx,yy,utmZone);
-        
-        % Set the paths to nongeoreferenced images and the output directory
-        % for post-processed georeferenced images 
-        dirin_img = [dirProc 'nongeoreferenced_Images_With_Vignetting_Removed\Track_' num2str(i) '\']; 
-        dirin_prj = dirProc;
-        
-        % Build batch file for running trimble georeferencing project 
-        buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,i,camName);
+    % Loop through tracks
+    for i=5 %1:length(tracks)
+    
+        % Check if track is stable
+        if trackTag(i).stable==1
+    
+            % Compute mean northing and easting UTM coordinate of ith track and
+            % convert it to decimal degree longitude and latitude
+            xx=mean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),1),'omitnan');
+            yy=mean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),2),'omitnan');
+            [proj_lat,proj_lon]=utm2deg(xx,yy,utmZone);
+            
+            % Set the paths to nongeoreferenced images and the output directory
+            % for post-processed georeferenced images
+            dirin_img = [dirProc 'Images\Intermediate_Products\nongeoreferenced_Images_With_Vignetting_Removed\Track_' num2str(i) '\']; 
+            dirin_prj = dirProc;
+            
+            % Build batch file for running trimble georeferencing project 
+            buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,i,res,option_plot,0);
+        end
     end
-end
-
-%--- Build batch file for georeferencing images for identifying high glint regions ---%
-
-% Loop through tracks 
-for i=1:length(tracks)
-
-    % Check if track is stable
-    if trackTag(i).stable==1
-        
-        % Compute mean northing and easting UTM coordinate of ith track and
-        % convert it to decimal degree longitude and latitude
-        xx=mean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),1),'omitnan');
-        yy=mean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),2),'omitnan');
-        [proj_lat,proj_lon]=utm2deg(xx,yy,utmZone);
-        
-        % Set the paths to masks for determing high glint and output
-        % directory for georeferenced masks
-        dirin_img = [dirProc 'mask_For_Determining_High_Glint_Areas\Track_' num2str(i) '\'];
-        dirin_prj = dirProc;
-        
-        % Build batch file for running trimble georeferencing project
-        buildBatMask(dirin_img,dirin_prj,proj_lat,proj_lon,i,camName);
+    
+    %--- Build batch file for georeferencing images for identifying high glint regions ---%
+    
+    % Loop through tracks 
+    for i=5 %1:length(tracks)
+    
+        % Check if track is stable
+        if trackTag(i).stable==1
+            
+            % Compute mean northing and easting UTM coordinate of ith track and
+            % convert it to decimal degree longitude and latitude
+            xx=mean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),1),'omitnan');
+            yy=mean(A.data(tracks(i).Indices(1):tracks(i).Indices(2),2),'omitnan');
+            [proj_lat,proj_lon]=utm2deg(xx,yy,utmZone);
+            
+            % Set the paths to masks for determing high glint and output
+            % directory for georeferenced masks
+            dirin_img = [dirProc 'Images\Intermediate_Products\mask_For_Determining_High_Glint_Areas\Track_' num2str(i) '\'];
+            dirin_prj = dirProc;
+            
+            % Build batch file for running trimble georeferencing project
+            buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,i,res,option_plot,1);
+        end
     end
 end
 

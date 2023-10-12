@@ -11,7 +11,7 @@ function display_text(message, format)
     %   ----------
     %   message : String of characters. 
     %   format  : Specifies whether the message is a title, section, body.
-    %             Options include 'title', 'section', or 'body'. 
+    %             Options include 'title', 'section', 'subsection' or 'body'. 
     % 
     %   Returns
     %   -------
@@ -43,6 +43,19 @@ function display_text(message, format)
          message,...
         '---------------------------------------------------------------------------',...
         '                                                                           ');
+
+    %--- Subsection ---%
+    elseif strcmp(format,'subsection')
+
+        % Print subsection text
+        fprintf('%s\n%s\n%s\n',...    
+        '------------------------------',...
+         message,...
+        '------------------------------');
+
+        % fprintf('%s\n', ['%--- ' message ' ---%'])
+
+    %--- Body ---%
     elseif strcmp(format,'body')
         
         % Print body text

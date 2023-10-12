@@ -27,10 +27,10 @@ exp = 'SMODE IOP1';
 StartDate = '20221016';                                                    
 
 % Directories
-dirRaw = 'W:\\SMODE_2022\RAW\VIDEO\Frames\20221016_1\Images\';         
-dirProc = 'W:\\SMODE_2022\RAW\VIDEO\Frames\20221016_1\';                  
-dirV = 'W:\\SMODE_2022\RAW\VIDEO\Frames\20221016_1\QC_Plots\';      
-dirOut = 'W:\\SMODE_2022\PROCESSED\VIDEO\20221016_1\'; 
+dirRaw = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221016_1\Images\';         
+dirProc = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221016_1\';                  
+dirV = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221016_1\QC_Plots\';      
+dirOut = 'D:\SMODE_2022\PROCESSED\VIDEO\20221016_1\'; 
 
 % Flight stability criteria parameters
 maxPer = [25 25];                                                           

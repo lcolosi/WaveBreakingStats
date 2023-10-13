@@ -70,7 +70,7 @@ function saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,dirOut)
     else 
 
         % Initialize an empty poolobj
-        poolobj = [];
+        poolobj = gcp('nocreate');
     
     end
 

@@ -104,7 +104,7 @@ function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,
     else 
 
         % Initialize an empty poolobj
-        poolobj = [];
+        poolobj = gcp('nocreate');
 
     end
 

@@ -1,7 +1,7 @@
 #----- Git Ignore File -----#
 
 # Data directory 
-
+data/
 
 # Figs directory 
 

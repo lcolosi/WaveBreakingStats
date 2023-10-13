@@ -116,9 +116,9 @@ function buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,trackNr,res,option_plot,
     %%%%
     
     if mask == 0
-        display_text(['Flight track', num2str(trackNr),  ': Building batch file for equalize image...'],'body')
+        display_text(['Flight track ', num2str(trackNr),  ': Building batch file for equalize image...'],'body')
     else 
-        display_text(['Flight track', num2str(trackNr),  ': Building batch file for high sun-glint mask...'],'body')
+        display_text(['Flight track ', num2str(trackNr),  ': Building batch file for high sun-glint mask...'],'body')
     end
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -498,7 +498,7 @@ function buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,trackNr,res,option_plot,
     fprintf(fid,'\n');
     
     % Write the Trimble batch commands 
-    fprintf(fid,'orthomaster.exe -batch -prj %s%s\n',dirout_prj_xml,prj_files(kk).name);
+    fprintf(fid,'orthomaster.exe -batch -prj %s%s\n',dirout_prj_xml,prj_files.name);
     fclose(fid);
 
     display_text('    Node 4: Batch file generation complete.','body')

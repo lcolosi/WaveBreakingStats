@@ -18,7 +18,7 @@ display_text('Step 1: Setting input parameters.','section')
 option_plot          = 0; 
 option_eo_split      = 0;
 option_image_proc    = 0;  
-option_build_bat     = 1;
+option_run_bat       = 0;
 option_globalOrlocal = 1;                                                 
 
 % Experiment title
@@ -46,7 +46,7 @@ tCheck = 7;
 winSize = 7;                                                                
 sigma_ff_m = 300;                                                           
 sigma_ff_v = 450;                                                           
-sigBrightness = 3;                                                          
+sigBrightness = 3000;                                                          
 B_threshold = 0.8;                                                          
 n_sigma = 5;                                                                
 stdMag=-0.1;                                                                
@@ -57,7 +57,10 @@ utmZone='10 N';
 
 % Brightness threshold parameters
 localStep=3;                                                               
-peakPercentage=20;                                                         
+peakPercentage=20;
+
+% Lambda of c parameters
+SpreadMax=110;
 
 % Set text interpreter
 set_interpreter('latex')
@@ -136,7 +139,7 @@ display_text('Done!','body')
 %% Remove vignetting and computing parameters for identifying high glint regions 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-display_text('Step 4: Removing vignetting, equalizing image, and computing images for identifying high sun glint regions.','section')
+display_text('Step 4: Removing vignetting, equalizing image, and generating images for identifying high sun glint regions.','section')
 
 % Obtain the filenames of the non-georeferenced video images 
 D_Im = dir([dirRaw '*.tif']);
@@ -167,7 +170,7 @@ if option_image_proc == 1
     % intermediate products to dirMGlint
     saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,dirMGlint);
     
-    % Eliminate areas with high glint. Std mag determines the number of
+    % Eliminate areas with high glint. StdMag determines the number of
     % standard deviations for categorizing high glint areas.
     [Glint]=det_glint(meanIm,stdMag,tracks,trackTag);
 
@@ -201,11 +204,10 @@ display_text('Done!','body')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Build and execute .bat file for georeferencing processed images with Trimble 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-close all
+
 display_text('Step 5: Building and executing .bat files for georeferencing processed images','section')
 
-% Build batch files
-if option_build_bat == 1
+if option_run_bat == 1
 
     %--- Build batch file for georeferencing images ---%
 
@@ -254,57 +256,57 @@ if option_build_bat == 1
             buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,i,res,option_plot,1);
         end
     end
-end
 
-%--- Execute batch files ---%
-
-% Loop through tracks 
-for i=5 %1:length(tracks)
+    %--- Execute batch files ---%
     
-    % Check if track is stable 
-    if trackTag(i).stable==1
-        
-        % Obtain file name of .bat file  
-        fileNN=dir([dirProc 'Project\Track_' num2str(i) '\' '*.bat']);
-        
-        % Execute batch file for trimble georeferencing image project
-        system([dirProc 'Project\Track_' num2str(i) '\' fileNN.name]);
-
+    % Loop through tracks 
+    for i=5 %1:length(tracks)
+            
+        % Check if track is stable 
+        if trackTag(i).stable==1
+            
+            % Obtain file name of .bat file  
+            fileNN=dir([dirProc 'Project\Track_' num2str(i) '\' '*.bat']);
+            
+            % Execute batch file for trimble georeferencing image project
+            system([dirProc 'Project\Track_' num2str(i) '\' fileNN.name]);
+    
+        end
     end
-end
-
-% Loop through tracks
-for i=5 %1:length(tracks)
     
-    % Check if track is stable 
-    if trackTag(i).stable==1
-        
-        % Obtain file name of .bat file
-        fileNN=dir([dirProc 'Project\TrackMask_' num2str(i) '\' '*.bat']);
-        
-        % Execute batch file for trimble georeferencing mask project
-        system([dirProc 'Project\TrackMask_' num2str(i) '\' fileNN.name]);
-
+    % Loop through tracks
+    for i=5 %1:length(tracks)
+            
+        % Check if track is stable 
+        if trackTag(i).stable==1
+            
+            % Obtain file name of .bat file
+            fileNN=dir([dirProc 'Project\TrackMask_' num2str(i) '\' '*.bat']);
+            
+            % Execute batch file for trimble georeferencing mask project
+            system([dirProc 'Project\TrackMask_' num2str(i) '\' fileNN.name]);
+    
+        end
     end
 end
 
 display_text('Done!','body')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Determine brightness threshold of breakers for each track
+%% Determine brightness threshold of breakers 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Set pixel value range for 16 bit images
-arrayHist=0:16:256*256;
+display_text('Step 6: Determining brightness threshold of breakers','section')
 
 % Set directory to save brightness threshold
+dirProc = 'D:\DEPLOYMENTS\PROGRAMS\WaveBreakingStats\data'; 
 dirProcessed=[dirProc 'Output\'];
 
 % Jessica's Method
 if option_globalOrlocal == 1
-    [Threshold,N]=global_Thresh(peakPercentage,dirProcessed,D_Im,tracks_Im,trackTag,tracks,arrayHist,meanIm,RM_Nr,Glint,Glint_mask);
+    [Threshold,N]=global_Thresh(peakPercentage,dirProcessed,tracks_Im,trackTag,tracks,meanIm,RM_Nr,Glint);
 else 
-    [Threshold,N]=local_Thresh(peakPercentage,dirProcessed,D_Im,tracks_Im,trackTag,tracks,arrayHist,meanIm,RM_Nr,Glint,Glint_mask,localStep);
+    [Threshold,N]=local_Thresh(peakPercentage,dirProcessed,tracks_Im,trackTag,tracks,meanIm,RM_Nr,Glint,localStep);
 end
 
 % Slight variation on Jessica's method
@@ -340,7 +342,7 @@ else
 end
 
 % Plot 
-if option_plot
+if option_plot == 1
 
     % Create a subdirectory for vignette removal plots
     dirBT=[dirV 'Quality_Control\Brightness_Threshold_New\'];
@@ -351,14 +353,32 @@ if option_plot
 
 end
 
+display_text('Done!','body')
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Start running the code for determining Lambda and white cap coverage
+%% Determine Lambda of c and compute wave breaking statistics
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% v3 - portion of image v4- portion, 30cm v5 - old processing portion of
-% image
-for i=11:1:12%1:length(tracks)
+display_text('Step 7: Determining Lambda of c and compute wave breaking statistics','section')
+
+offSetEnds=0;
+
+% The images are indexed in seconds from the begining of the week. This
+% requires entering the start date manually.
+StartTime=datenum([2021,5,2,0,0,0]);
+
+% Determine wind direction from the data.
+load('PLD2_1hz_ALL_1.mat');
+WindTime=PLD2_1hz.time;
+Speeds=PLD2_1hz.TWD;
+
+% Loop through tracks
+for i=1:length(tracks)
+    
+    % Check if flight track is stable 
     if trackTag(i).stable==1
+
+        % Set 
         if i>=10
             dirV=[dirProc 'Lambdas_inbuilt_Threshold_0_pyramidScaled_V5\Track_' num2str(i) '\'];
         else
@@ -367,97 +387,68 @@ for i=11:1:12%1:length(tracks)
         if ~exist(dirV, 'dir'), mkdir(dirV); end
         
        
-        
+        % 
         dirinIM=[dirProc 'Output\Track_' num2str(i) '\'];
         dirinIM_mask=[dirProc 'Output\TrackMask_' num2str(i) '\'];
         filenamesIM=dir([dirinIM '*.tif']);
-        
-        offSetEnds=0;
-        
+
+        % 
         i1=1+3+(trackTag(i).range(1)+offSetEnds)-tracks(i).Indices(1);
         i2=1+(trackTag(i).range(2)-offSetEnds)-tracks(i).Indices(1)-1;
-        %Threshold(i)=11000;
-        %process_Lambda_New(i1,i2,filenamesIM,dirinIM,dirV,Threshold(i),300,0.1,0.2)
+
+        % 
         pozicija=find('_'==filenamesIM(1).name,2);
         pozicija=pozicija(2);
+
+        % 
         strN=filenamesIM(1).name;
         dxIm = str2num(strN(pozicija+1:pozicija+2))/100;
-%         dxIm = 0.3;
-        % Define angles (from mean wind direction) which are considered as
-        % breaking.
-        SpreadMax=110;
         
-        % Determine wind direction from the data. The images are indexed in
-        % seconds from the begining of the week. This requires entering the
-        % start date manually.
-        StartTime=datenum([2021,5,2,0,0,0]);
-        % Note - some days lack data in SONIC2, but it is prefered option
-        % otherwise
-        load('PLD2_1hz_ALL_1.mat');
-        WindTime=PLD2_1hz.time;
-        Speeds=PLD2_1hz.wind_direction;
-        Speeds=PLD2_1hz.TWD;
+        % 
         WindDir=determine_wind(Speeds,WindTime,StartTime,tracks(i).Indices,An);
+
+        % 
         process_Lambda_New(i1,i2-3,filenamesIM,dirinIM,dirV,Threshold(i).th,300,dxIm,0.2,WindDir,SpreadMax,Glint(i).list,dirinIM_mask,meanIm(i).im,RM_Nr(i).nr,GlobalOrLocal,trackTag(i),tracks(i))
     end
 end
 
 
-
-% Plot out randomly chosen examples from the track
-dirV=[dirProc 'Quality_Control\LambdaIms_inbuilt\'];
-if ~exist(dirV, 'dir'), mkdir(dirV); end
-
-dirV2=[dirProc 'Plots\DistributionsAll\'];
-if ~exist(dirV2, 'dir'), mkdir(dirV2); end
-
-dirV2=[dirProc 'Plots\DistributionsAll_WC_Glint\'];
-if ~exist(dirV2, 'dir'), mkdir(dirV2); end
-
-dirV2=[dirProc 'Plots\DistributionsAll_new\'];
-if ~exist(dirV2, 'dir'), mkdir(dirV2); end
-
-dirV2=[dirProc 'Plots\Distributions_Inbuilt\'];
-if ~exist(dirV2, 'dir'), mkdir(dirV2); end
-
-
-dirV3=[dirProc 'Plots\Summary\'];
-if ~exist(dirV3, 'dir'), mkdir(dirV3); end
-
-dirV4=[dirProc 'Plots\Alongtrack_OppositeDirection\'];
-if ~exist(dirV4, 'dir'), mkdir(dirV4); end
-
-dirV4=[dirProc 'Plots\Alongtrack_test3\'];
-if ~exist(dirV4, 'dir'), mkdir(dirV4); end
-addpath('utilities')
-
-
-dirV2=[dirProc 'Plots\DistributionsAll_new\'];
-if ~exist(dirV2, 'dir'), mkdir(dirV2); end
-
-for i=11:1:11%1:length(tracks)
-    i
+% Loop through tracks
+for i=1:length(tracks)
+    
+    % Check if flight track is stable
     if trackTag(i).stable==1
+
+        % 
         if i>=10
             dirL=[dirProc 'Lambdas_inbuilt\Track_' num2str(i) '\'];
         else
             dirL=[dirProc 'Lambdas_inbuilt\Track_0' num2str(i) '\'];
         end
         filenames=dir([dirL '*.mat']);
-        dirinIM=[dirProc 'Output\Track_' num2str(i) '\'];
         
+        % 
+        dirinIM=[dirProc 'Output\Track_' num2str(i) '\'];
         filenamesIM=dir([dirinIM '*.tif']);
+        
+        % 
         pozicija=find('_'==filenamesIM(1).name,2);
         pozicija=pozicija(2);
+        
+        % 
         strN=filenamesIM(1).name;
         dxIm = str2num(strN(pozicija+1:pozicija+2))/100;
-        
-        PARAM.dt = 0.2;
+
+        % 
         pozicija=find('_'==filenamesIM(1).name,2);
         pozicija=pozicija(3);
         strN=filenamesIM(1).name;
+
+        % 
+        PARAM.dt = 0.2;
         PARAM.dx = str2num(strN(pozicija+1:pozicija+2))/100;
         
+        % 
         dirin_img = [dirProc 'Output\Track_' num2str(i) '\'];
         filenamesI=dir([dirin_img '*.tif']);
         
@@ -471,38 +462,13 @@ for i=11:1:11%1:length(tracks)
         %determineDists_Along(dirV4,i,dirL,filenames,dxIm,tracks,A,dirinIM);
     end
 end
-windData='PLD2_1hz.mat';
-waveData='WG1mc_Snn_Hs_30min.mat';
-
-% determine params for tfo
-for i=2:3%length(trackTag)
-    if trackTag(i).stable==1
-        
-        
-        WGTime=PLD2_AVG.time;
-        WGTime2=PLD2_FFT.time;
-        Hs=PLD2_AVG.Hs_fft;
-        Freq=0:0.01:0.82;
-        Spectra=[];
-        Spectra2=[];
-        for ii=1:83
-            Spectra(ii,:)=eval(['PLD2_FFT.avgSzz_' num2str(ii)]);
-            Spectra2(ii,:)=eval(['PLD2_FFT.avgSzz_' num2str(ii)]);
-        end
-        [Hs_all(i),freq_all(i)]=determine_params_TFO(Spectra,Freq,Hs,WGTime,WGTime2,StartTime,tracks(i).Indices,An,Spectra2);
-        
-        WindTime=PLD2_1hz.time;
-        us=movmean(PLD2_1hz.TWS*0.41/log(1.11/0.0002),100);
-        ustar(i)=determine_ustar(us,WindTime,StartTime,tracks(i).Indices,An);
-    end
-end
-
-plotAll_TFO(dirV2,trackTag,StartTime,tracks,An,Hs_all,freq_all,ustar);
 
 % Plot out other verification plots (wc coverage in images, total length of
 % breaking, spectrogram of Lambda distribution).
 
 %plotDists();
+
+display_text('Done!','body')
 
 %% Development Code
 
@@ -514,12 +480,68 @@ plotAll_TFO(dirV2,trackTag,StartTime,tracks,An,Hs_all,freq_all,ustar);
 %     movefile([dirProc 'EO'],[dirProc 'Trimble_EO']);
 % end
 
+%Threshold(i)=11000;
+%process_Lambda_New(i1,i2,filenamesIM,dirinIM,dirV,Threshold(i),300,0.1,0.2)
 
+%         dxIm = 0.3;
 
+% % Plot out randomly chosen examples from the track
+% dirV=[dirProc 'Quality_Control\LambdaIms_inbuilt\'];
+% if ~exist(dirV, 'dir'), mkdir(dirV); end
+% 
+% dirV2=[dirProc 'Plots\DistributionsAll\'];
+% if ~exist(dirV2, 'dir'), mkdir(dirV2); end
+% 
+% dirV2=[dirProc 'Plots\DistributionsAll_WC_Glint\'];
+% if ~exist(dirV2, 'dir'), mkdir(dirV2); end
+% 
+% dirV2=[dirProc 'Plots\DistributionsAll_new\'];
+% if ~exist(dirV2, 'dir'), mkdir(dirV2); end
+% 
+% dirV2=[dirProc 'Plots\Distributions_Inbuilt\'];
+% if ~exist(dirV2, 'dir'), mkdir(dirV2); end
+% 
+% 
+% dirV3=[dirProc 'Plots\Summary\'];
+% if ~exist(dirV3, 'dir'), mkdir(dirV3); end
+% 
+% dirV4=[dirProc 'Plots\Alongtrack_OppositeDirection\'];
+% if ~exist(dirV4, 'dir'), mkdir(dirV4); end
+% 
+% dirV4=[dirProc 'Plots\Alongtrack_test3\'];
+% if ~exist(dirV4, 'dir'), mkdir(dirV4); end
+% addpath('utilities')
+% 
+% 
+% dirV2=[dirProc 'Plots\DistributionsAll_new\'];
+% if ~exist(dirV2, 'dir'), mkdir(dirV2); end
+% 
 
-
-
-
-
-
-
+% % 
+% windData='PLD2_1hz.mat';
+% waveData='WG1mc_Snn_Hs_30min.mat';
+% 
+% % determine params for tfo
+% for i=2:3%length(trackTag)
+%     if trackTag(i).stable==1
+%         
+%         
+%         WGTime=PLD2_AVG.time;
+%         WGTime2=PLD2_FFT.time;
+%         Hs=PLD2_AVG.Hs_fft;
+%         Freq=0:0.01:0.82;
+%         Spectra=[];
+%         Spectra2=[];
+%         for ii=1:83
+%             Spectra(ii,:)=eval(['PLD2_FFT.avgSzz_' num2str(ii)]);
+%             Spectra2(ii,:)=eval(['PLD2_FFT.avgSzz_' num2str(ii)]);
+%         end
+%         [Hs_all(i),freq_all(i)]=determine_params_TFO(Spectra,Freq,Hs,WGTime,WGTime2,StartTime,tracks(i).Indices,An,Spectra2);
+%         
+%         WindTime=PLD2_1hz.time;
+%         us=movmean(PLD2_1hz.TWS*0.41/log(1.11/0.0002),100);
+%         ustar(i)=determine_ustar(us,WindTime,StartTime,tracks(i).Indices,An);
+%     end
+% end
+% 
+% plotAll_TFO(dirV2,trackTag,StartTime,tracks,An,Hs_all,freq_all,ustar);

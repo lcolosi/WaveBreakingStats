@@ -3,15 +3,15 @@ function saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,dirOut)
     %%%%
     % saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,dirOut)
     %
-    % Function for identifying high sun glint regions in each image for
-    % each track. More specifically, this function normalizes each image 
-    % for a given track by the maximum brightness in the image and saves 
-    % them in a new tif file. The output of this function will be 
-    % georeferenced using trimble. Then using the glint brightness
-    % threshold from det_glint.m script, the high sun glint region will be 
-    % identified for each georeferenced image. The mask associated with
-    % this region will be applied to the georeferenced image with 
-    % vignetting removed.      
+    % Function for identifying high sun glint regions in each image during 
+    % the stable flight period for each track. More specifically, this function 
+    % normalizes each image for a given track by the maximum brightness
+    % in the image and saves them in a new tif file. The output of this
+    % function will be georeferenced using trimble. Then using the 
+    % glint brightness threshold from det_glint.m script, the high sun
+    % glint region will be identified for each georeferenced image. The
+    % mask associated with this region will be applied to the
+    % georeferenced image with vignetting removed.      
     %
     %   Parameters
     %   ---------- 
@@ -96,17 +96,27 @@ function saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,dirOut)
             % Set nans in mean and standard deviation images to zero
             meanIm_temp(isnan(meanIm_temp))=0;
             
-            % Set beginning and end time indices for full flight track 
-            beginDif=tracks_Im(i).Indices(1);                               %+trackTag(i).range(1)-tracks(i).Indices(1);
-            endDif=tracks_Im(i).Indices(2);                                 %+trackTag(i).range(2)-tracks(i).Indices(2);
+            % Set beginning and end time indices for the stable flight period 
+            beginDif=tracks_Im(i).Indices(1)+trackTag(i).range(1)-tracks(i).Indices(1);
+            endDif=tracks_Im(i).Indices(2)+trackTag(i).range(2)-tracks(i).Indices(2);
             
             % Create a subdirectory for image mask output after processing
             dirV=[dirOut 'Track_' num2str(i) '\'];
             if ~exist(dirV, 'dir'), mkdir(dirV); end
 
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %% Generate mask for identifying high sun-glint regions
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+            % Generate waitbar
+            pw = PoolWaitbar(endDif-beginDif, 'Generating mask for identifying high sun-glint regions.');
+
             % Loop through images 
             parfor j=beginDif:endDif
                 
+                % Update waitbar
+                increment(pw)
+
                 % Normalize mean image by its maximum value and convert to
                 % array elements to 16 bit unsigned integers  
                 a2=uint16((meanIm_temp/max(meanIm_temp(:)))*256*256);

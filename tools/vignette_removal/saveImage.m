@@ -3,8 +3,8 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirout,sigma_ff,n_sigma
     %%%%
     % saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirout,sigma_ff,n_sigma,meanIm,stdIm,meanOriginal,sigBrightness)
     %
-    % Function for removing vingetting and equalizing images along a 
-    % full flight track. Vignetting is removed using a flat field 
+    % Function for removing vingetting and equalizing images during the 
+    % stable flight period. Vignetting is removed using a flat field 
     % correction. The image is further equalized by normalizing each
     % pixel's deviation from the mean brightness by the 2D gaussian filter
     % of the squared deviations from the mean (this normalization quantity
@@ -112,9 +112,9 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirout,sigma_ff,n_sigma
         % indices
         if (trackTag(i).stable==1) && (~isempty(tracks(i).Indices))
 
-            % Set beginning and end time indices for full flight track
-            beginDif=tracks_Im(i).Indices(1);                              
-            endDif=tracks_Im(i).Indices(2);
+            % Set beginning and end indices for stable flight period 
+            beginDif=tracks_Im(i).Indices(1)+trackTag(i).range(1)-tracks(i).Indices(1);
+            endDif=tracks_Im(i).Indices(2)+trackTag(i).range(2)-tracks(i).Indices(2);
 
             % Set the mean and standard deviation pixel images to avoid 
             % high data communication overhead in parfor loop 
@@ -133,6 +133,10 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirout,sigma_ff,n_sigma
             dirV=[dirout 'Track_' num2str(i) '\'];
             if ~exist(dirV, 'dir'), mkdir(dirV); end
 
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %% Remove vignetting and equalize image
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
             % Generate waitbar
             pw = PoolWaitbar(endDif-beginDif, 'Removing vignetting and equalizing image.');
 
@@ -141,10 +145,6 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirout,sigma_ff,n_sigma
                 
                 % Update waitbar
                 increment(pw)
-
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-                %% Remove Vignetting and equalize image
-                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
                 % Load jth image
                 a=imread([dirRaw D_Im(j).name]);
@@ -215,7 +215,6 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirout,sigma_ff,n_sigma
     end
 
     % End parallel computing session and close wait bar
-    delete(poolobj)
-    close(f)
+    delete(poolobj); close(f)
 
 end

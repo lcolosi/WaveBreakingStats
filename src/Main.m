@@ -303,7 +303,9 @@ dirProc = 'D:\DEPLOYMENTS\PROGRAMS\WaveBreakingStats\data';
 dirProcessed=[dirProc 'Output\'];
 
 % Compute brightness threshold
-[Threshold,N]=local_Thresh(peakPercentage,dirProcessed,tracks_Im,trackTag,tracks,meanIm,RM_Nr,Glint,localStep);
+[Threshold,N]=global_local_Thresh(peakPercentage,dirProcessed,tracks_Im,...
+                                  trackTag,tracks,meanIm,RM_Nr,Glint,...
+                                  localStep);
 
 % Denoise local threshold estimate
 if option_globalOrlocal == 0

@@ -18,9 +18,11 @@ function Threshold = det_Threshold(N_all,arrayHist,peakPercentage)
     % 
     %%%%
 
-    % 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Compute complementary cumulative distribution function 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     N_CS=cumsum(N_all(200:500));
-    N_CS=N_CS/nanmax(N_CS);
+    N_CS=N_CS/max(N_CS,[],'omitnan');
     N_CS=1-N_CS;
     
     % 
@@ -30,6 +32,24 @@ function Threshold = det_Threshold(N_all,arrayHist,peakPercentage)
     [MaxA,Indeks]=max(Array);
     ThresholdInd=find(Array(Indeks:end)<(peakPercentage/100)*MaxA,1);
     Threshold=(ThresholdInd+Indeks+200+3)*(arrayHist(2)-arrayHist(1));
+
+    % Loop through tracks
+    for i=1:length(tracks)
+        for j=1:length(N(i).hi(:,1))
+            if N(i).hi(j,1)==0
+                Threshold(i).th(j)=0;
+            else
+                N2=(N(i).hi(j,:));
+                N_CS=cumsum(N2(200:500));
+                N_CS=N_CS/max(N_CS,[],'omitnan');
+                N_CS=1-N_CS;
+                ind1=find(N_CS<0.5,1,'first');
+                [res_x, idx_of_result]=knee_pt(N_CS(ind1:301),ind1:301);
+                Threshold(i).th(j)=(199+ind1+idx_of_result)*16;
+            end
+            
+        end
+    end
     
 
 end

@@ -15,23 +15,23 @@ display_text('Step 1: Setting input parameters.','section')
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Select process to run (0 or 1)
-option_plot          = 0; 
-option_eo_split      = 0;
-option_image_proc    = 0;  
-option_run_bat       = 0;
+option_plot          = 1; 
+option_eo_split      = 1;
+option_image_proc    = 1;  
+option_run_bat       = 1;
 option_globalOrlocal = 1;                                                 
 
 % Experiment title
 exp = 'SMODE IOP1';
 
 % Start date of flight in UTC time
-StartDate = '20221016';                                                    
+StartDate = '20221025';                                                    
 
 % Directories
-dirRaw = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221016_1\Images\';         
-dirProc = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221016_1\';                  
-dirV = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221016_1\QC_Plots\';      
-dirOut = 'D:\SMODE_2022\PROCESSED\VIDEO\20221016_1\'; 
+dirRaw = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221025_1\Images\';         
+dirProc = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221025_1\';                  
+dirV = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221025_1\QC_Plots\';      
+dirOut = 'D:\SMODE_2022\PROCESSED\VIDEO\20221025_1\'; 
 
 % Flight stability criteria parameters
 maxPer = [25 25];                                                           
@@ -73,7 +73,7 @@ display_text('Done!','body')
 %% Import EO data and determine time indices of each track in the EO file
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
-display_text('Step 2: Importing EO data and identifing flight tracks.','section')
+display_text('Step 2: Importing EO data and identifying flight tracks.','section')
 
 % Obtain filenames of all EO files 
 D = dir([dirProc 'EO\' '*EO.txt']);
@@ -113,7 +113,7 @@ display_text('Done!','body')
 % Note: If flight track is NOT steady, Lambda of c distributions and 
 % whitecap coverage will not be computed.  
 
-display_text('Step 3: Determining periods of aircraft stability for each track.','section')
+display_text('Step 3: Determining periods of aircraft stability.','section')
 
 % Identify track stability based on input criteria
 trackTag = trackSteady(A,tracks,maxPer,sigRoll,sigPitch,sigHeading,Shift,Nstd,tCheck,An);
@@ -205,7 +205,7 @@ display_text('Done!','body')
 %% Build and execute .bat file for georeferencing processed images with Trimble 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 
-display_text('Step 5: Building and executing .bat files for georeferencing processed images','section')
+display_text('Step 5: Building and executing files for georeferencing images.','section')
 
 if option_run_bat == 1
 
@@ -298,54 +298,26 @@ display_text('Done!','body')
 
 display_text('Step 6: Determining brightness threshold of breakers','section')
 
-% Set directory to save brightness threshold
+% Set directory to save georeferenced images
 dirProc = 'D:\DEPLOYMENTS\PROGRAMS\WaveBreakingStats\data'; 
 dirProcessed=[dirProc 'Output\'];
 
-% Jessica's Method
-if option_globalOrlocal == 1
-    [Threshold,N]=global_Thresh(peakPercentage,dirProcessed,tracks_Im,trackTag,tracks,meanIm,RM_Nr,Glint);
-else 
-    [Threshold,N]=local_Thresh(peakPercentage,dirProcessed,tracks_Im,trackTag,tracks,meanIm,RM_Nr,Glint,localStep);
+% Compute brightness threshold
+[Threshold,N]=local_Thresh(peakPercentage,dirProcessed,tracks_Im,trackTag,tracks,meanIm,RM_Nr,Glint,localStep);
+
+% Denoise local threshold estimate
+if option_globalOrlocal == 0
+    Threshold = denoiseThreshold(Threshold,tracks,trackTag);
 end
 
-% Slight variation on Jessica's method
-
-% Loop through tracks
-for i=1:length(tracks)
-    for j=1:length(N(i).hi(:,1))
-        if N(i).hi(j,1)==0
-            Threshold(i).th(j)=0;
-        else
-            N2=(N(i).hi(j,:));
-            N_CS=cumsum(N2(200:500));
-            N_CS=N_CS/max(N_CS,[],'omitnan');
-            N_CS=1-N_CS;
-            ind1=find(N_CS<0.5,1,'first');
-            [res_x, idx_of_result]=knee_pt(N_CS(ind1:301),ind1:301);
-            Threshold(i).th(j)=(199+ind1+idx_of_result)*16;
-        end
-        
-    end
-end
-
-% 
-if option_globalOrlocal == 1
-    dirV=[dirProc 'Saved_Matlab_Data\'];
-    if ~exist(dirV, 'dir'), mkdir(dirV); end
-    save([dirV 'thresh_global.mat'],'Threshold','N');
-else 
-    Threshold=denoiseThreshold(Threshold,tracks,trackTag);
-    dirV=[dirProc 'Saved_Matlab_Data\'];
-    if ~exist(dirV, 'dir'), mkdir(dirV); end
-    save([dirV 'thresh_local_NewMethod.mat'],'Threshold','N');
-end
+% Save brightness threshold
+save([dirProc 'Images\Intermediate_Products\brightness_threshold.mat'],'Threshold','N');
 
 % Plot 
 if option_plot == 1
 
-    % Create a subdirectory for vignette removal plots
-    dirBT=[dirV 'Quality_Control\Brightness_Threshold_New\'];
+    % Create a subdirectory for brightness threshold plots
+    dirBT=[dirV '\Brightness_Threshold\'];
     if ~exist(dirBT, 'dir'), mkdir(dirBT); end
 
     % Generate plots
@@ -359,7 +331,7 @@ display_text('Done!','body')
 %% Determine Lambda of c and compute wave breaking statistics
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-display_text('Step 7: Determining Lambda of c and compute wave breaking statistics','section')
+display_text('Step 7: Determining Lambda of c and computing wave breaking statistics','section')
 
 offSetEnds=0;
 
@@ -478,6 +450,12 @@ display_text('Done!','body')
 % Identify that EO files are processed through Trimble
 % if isfolder([dirProc 'EO'])
 %     movefile([dirProc 'EO'],[dirProc 'Trimble_EO']);
+% end
+
+% if option_globalOrlocal == 1
+%     [Threshold,N]=global_Thresh(peakPercentage,dirProcessed,tracks_Im,trackTag,tracks,meanIm,RM_Nr,Glint);
+% else 
+%     [Threshold,N]=local_Thresh(peakPercentage,dirProcessed,tracks_Im,trackTag,tracks,meanIm,RM_Nr,Glint,localStep);
 % end
 
 %Threshold(i)=11000;

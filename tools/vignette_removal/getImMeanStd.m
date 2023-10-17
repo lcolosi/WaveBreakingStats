@@ -96,7 +96,7 @@ function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,
 
         % Set the number of CPU cores (i.e., the brains of the CPU that recieve
         % and execute operations for your computer) 
-        numCores=feature('numcores');
+        numCores=10; %feature('numcores');
     
         % Run code on parallel pools for increases efficiency
         poolobj = parpool(numCores);
@@ -119,7 +119,7 @@ function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,
     f = waitbar(0,'Please wait...','Position', [pos(1) pos(2)+2*pos(4) pos(3) pos(4)]);
 
     % Loop through tracks 
-    for i=5 %1:length(tracks_Im)
+    for i=8 %1:length(tracks_Im)
 
         % Update waitbar
         waitbar(i/length(tracks_Im),f,...
@@ -129,21 +129,21 @@ function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,
         if trackTag(i).stable==1
 
             % Set beginning and end indices for stable flight period 
-            beginDif=tracks_Im(i).Indices(1)+trackTag(i).range(1)-tracks(i).Indices(1);
-            endDif=tracks_Im(i).Indices(2)+trackTag(i).range(2)-tracks(i).Indices(2);
+            beginSP = trackTag(i).range(1);
+            endSP = trackTag(i).range(2);
 
             % Compute the mean and standard deviation of the image plus identify outliers       
-            [meanOriginal(i).nr,RM_Nr(i).nr,meanIm(i).im,stdIm(i).im]=determineMeanStd(beginDif,endDif,dirRaw,D_Im,sigma_ff,B_threshold,n_sigma);
+            [meanOriginal(i).nr,RM_Nr(i).nr,meanIm(i).im,stdIm(i).im]=determineMeanStd(beginSP,endSP,dirRaw,D_Im,sigma_ff,B_threshold,n_sigma); %#ok
             
             % Compute the 2D moving average of the mean and standard deviation of brightness 
-            meanIm(i).im=mean2D(meanIm(i).im,winSize);
-            stdIm(i).im=mean2D(stdIm(i).im,winSize);
+            meanIm(i).im=mean2D(meanIm(i).im,winSize);                      %#ok
+            stdIm(i).im=mean2D(stdIm(i).im,winSize);                        %#ok
         
         % If the start and end time indices for the ith track are empty,
         % set mean and standard deviation of image to empty arrays
         else
-            meanIm(i).im=[];
-            stdIm(i).im=[];
+            meanIm(i).im=[];                                                %#ok
+            stdIm(i).im=[];                                                 %#ok
         end
     end
 

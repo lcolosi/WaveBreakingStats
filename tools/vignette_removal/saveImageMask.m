@@ -62,7 +62,7 @@ function saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,dirOut)
 
         % Set the number of CPU cores (i.e., the brains of the CPU that recieve
         % and execute operations for your computer) 
-        numCores=feature('numcores');
+        numCores=10; %feature('numcores');
     
         % Run code on parallel pools for increases efficiency
         poolobj = parpool(numCores);
@@ -79,7 +79,7 @@ function saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,dirOut)
     f = waitbar(0,'Please wait...','Position', [pos(1) pos(2)+2*pos(4) pos(3) pos(4)]);
 
     % Loop through tracks
-    for i=5 %1:length(tracks)
+    for i=8 %1:length(tracks)
 
         % Update waitbar
         waitbar(i/length(tracks),f,...
@@ -97,8 +97,8 @@ function saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,dirOut)
             meanIm_temp(isnan(meanIm_temp))=0;
             
             % Set beginning and end time indices for the stable flight period 
-            beginDif=tracks_Im(i).Indices(1)+trackTag(i).range(1)-tracks(i).Indices(1);
-            endDif=tracks_Im(i).Indices(2)+trackTag(i).range(2)-tracks(i).Indices(2);
+            beginSP = trackTag(i).range(1);
+            endSP = trackTag(i).range(2);
             
             % Create a subdirectory for image mask output after processing
             dirV=[dirOut 'Track_' num2str(i) '\'];
@@ -109,10 +109,10 @@ function saveImageMask(D_Im,tracks_Im,trackTag,tracks,meanIm,dirOut)
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
             % Generate waitbar
-            pw = PoolWaitbar(endDif-beginDif, 'Generating mask for identifying high sun-glint regions.');
+            pw = PoolWaitbar(endSP-beginSP, 'Generating mask for identifying high sun-glint regions.');
 
             % Loop through images 
-            parfor j=beginDif:endDif
+            parfor j=beginSP:endSP
                 
                 % Update waitbar
                 increment(pw)

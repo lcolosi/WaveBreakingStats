@@ -47,7 +47,7 @@ function [Glint]=det_glint(meanIm,stdMag,tracks,trackTag)
     %%%%
 
     % Loop through tracks
-    for i=5 %1:length(tracks)
+    for i=8 %1:length(tracks)
         
         % Check if track is stable 
         if trackTag(i).stable==1

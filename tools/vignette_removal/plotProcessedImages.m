@@ -69,7 +69,7 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
 
     % Loop through tracks 
-    for i=5 %1:length(tracks)
+    for i=8 %1:length(tracks)
         
         % Check if track is stable and if full track has start and end time
         % indices
@@ -127,11 +127,11 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
             print(gcf,'-dpng', [trackDir 'Brightness_statistics-track' num2str(i) '.png'], '-r200');
     
             % Set beginning and end indices for stable flight period  
-            beginDif=tracks_Im(i).Indices(1)+trackTag(i).range(1)-tracks(i).Indices(1);
-            endDif=tracks_Im(i).Indices(2)+trackTag(i).range(2)-tracks(i).Indices(2);
+            beginSP = trackTag(i).range(1);
+            endSP = trackTag(i).range(2);
             
             % Select 10 images from the track for plotting
-            imNum=floor((0:9)*(endDif-beginDif)/10)+beginDif;
+            imNum=floor((0:9)*(endSP-beginSP)/10)+beginSP;
 
             % Loop through the ten images 
             for j=1:10

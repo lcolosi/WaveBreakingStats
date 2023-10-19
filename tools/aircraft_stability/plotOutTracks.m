@@ -1,5 +1,5 @@
 function plotOutTracks(A,tracks,trackTag,dirTS,An,sc,utc_time,StartDate,utmZone)
-
+    
     %%%%
     % plotOutTracks(A,tracks,trackTag,dirTS,An,sc,utc_time,StartDate,utmZone)
     %

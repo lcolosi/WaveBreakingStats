@@ -6,7 +6,7 @@ function tracks = DefineTracks(An)
     % Function for determining the start and end time indices of tracks 
     % (i.e., flight track), and relabel flight tracks starting at 1. 
     % Here, we assumes that the files are defined in form of: 
-    %               MASS_VIDEO_TrackNumber_ImageNumber .
+    %               MASS_VIDEO_TrackNumber_ImageNumber
     %
     %   Parameters
     %   ----------

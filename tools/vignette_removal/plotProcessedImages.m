@@ -214,7 +214,7 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
                     % Set colorbar attributes
                     colormap(flipud(cbrewer2('RdYlBu',length(tracks))));
                     yy=colorbar();
-                    clim([500 10000])
+                    caxis([500 10000])
                     title(yy,'Brightness','fontname',font,'FontSize',fontsize)
                     
                 %--------- Subplot 2 ---------%
@@ -235,7 +235,7 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
                     colormap(flipud(cbrewer2('RdYlBu',length(tracks))));
                     yy=colorbar();
                     title(yy,'Brightness','fontname',font,'FontSize',fontsize)
-                    clim([500 10000])
+                    caxis([500 10000])
                     drawnow
 
                 % Save figure

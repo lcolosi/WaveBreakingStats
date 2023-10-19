@@ -9,7 +9,9 @@ function tracks_Im = DefineTracksIm(D_Im,tracks)
     % specifically, we check if the number of tracks and the number of
     % time steps (i.e., the number of images and the number for EO
     % trajectory values) in each track match between the raw imagery and
-    % EO files. Function prints a warning if they are not consistent. 
+    % EO files. Also, it checks if the start and end file indicies match 
+    % between raw imagery and EO files. Function throws an error if they
+    % are not consistent. 
     %
     %   Parameters
     %   ----------
@@ -46,7 +48,7 @@ function tracks_Im = DefineTracksIm(D_Im,tracks)
         k=find('_'==arrTemp,3,'first');
         
         % Obtain the track number ID between the second and third underscores
-        Indices(i)=str2num(arrTemp(k(2)+1:k(3)-1));
+        Indices(i)=str2num(arrTemp(k(2)+1:k(3)-1));                         %#ok
     
     end
     
@@ -68,9 +70,9 @@ function tracks_Im = DefineTracksIm(D_Im,tracks)
         % Save start and end time indicies for ith track if track is
         % greater than one time step
         if startI ~= endI
-            tracks_Im(i).Indices=[startI endI];
+            tracks_Im(i).Indices=[startI endI];                             %#ok
         else
-            tracks_Im(i).Indices = [];
+            tracks_Im(i).Indices = [];                                      %#ok
         end
     end
     
@@ -81,34 +83,30 @@ function tracks_Im = DefineTracksIm(D_Im,tracks)
     % Note: Check if the number of tracks and the number of time steps in each
     % track match between the raw imagery and EO file. 
     
-    % Initialize boolean variable 
-    True=1;
-    
     %--- Check number of tracks ---% 
     if length(tracks)~=length(tracks_Im)
-        True=0;
+        error('Number of tracks do not match!');
     end
     
-    %--- Check number of images/EO file trajectory values ---% 
-    if True==1
+    %--- Check number of images/EO file trajectory values and time indices ---% 
     
-        % Loop through tracks
-        for i=1:length(tracks)
-    
-            % Check if indices of the ith track from EO file is empty
-            if ~isempty(tracks(i).Indices)
-    
-                % Compare the number of time steps between the EO file and
-                % raw imagery
-                if tracks_Im(i).Indices(2)-tracks_Im(i).Indices(1)~=tracks(i).Indices(2)-tracks(i).Indices(1)
-                    True=0;
-                end
+    % Loop through tracks
+    for i=1:length(tracks)
+
+        % Check if indices of the ith track from EO file is empty
+        if ~isempty(tracks(i).Indices)
+
+            % Compare the number of time steps between the EO file and
+            % raw imagery
+            if tracks_Im(i).Indices(2)-tracks_Im(i).Indices(1)~=tracks(i).Indices(2)-tracks(i).Indices(1)
+                error('Number of images do not match!');
+            end
+
+            % Compare beginning and end time indices of the full track 
+            % between images and EO files 
+            if tracks_Im(i).Indices(1)~=tracks(i).Indices(1) || tracks_Im(i).Indices(2)~=tracks(i).Indices(2)
+                error(['Start or end time indicies for Track ' num2str(i) ' between EO file and images do not match!']);
             end
         end
-    end
-    
-    % If tracks and images do not match, print warning statement
-    if True==0
-       fprintf('Number of tracks/images do not match!'); 
     end
 end

@@ -1,7 +1,7 @@
-function [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginDif,endDif,dirRaw,D_Im,sigma_ff,B_threshold,n_sigma)
+function [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginSP,endSP,dirRaw,D_Im,sigma_ff,B_threshold,n_sigma)
 
     %%%%
-    % [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginDif,endDif,dirRaw,D_Im,arrayHist,sigma_ff,B_threshold,n_sigma)
+    % [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginSP,endSP,dirRaw,D_Im,arrayHist,sigma_ff,B_threshold,n_sigma)
     %
     % Function for determining the mean and standard deviation of 
     % brightness for each pixel over the time period of the stable flight
@@ -10,8 +10,8 @@ function [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginDif,endDif,di
     %
     %   Parameters
     %   ----------
-    %   beginDif    : Beginning time indices for stable flight period. 
-    %   endDif      : End time indices for stable flight period. 
+    %   beginSP    : Beginning time indices for stable flight period. 
+    %   endSP      : End time indices for stable flight period. 
     %   dirRaw      : Path to raw (non-georeferenced) video images for a
     %                 given flight.
     %   D_Im        : Filenames of the raw (non-georeferenced) video images.
@@ -69,10 +69,10 @@ function [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginDif,endDif,di
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % Generate waitbar
-    pw = PoolWaitbar(endDif-beginDif, 'Computing mean brightness over all pixels for each image.');
+    pw = PoolWaitbar(endSP-beginSP, 'Computing mean brightness over all pixels for each image.');
 
     % Loop through images 
-    parfor j=beginDif:endDif
+    parfor j=beginSP:endSP
         
         % Update waitbar
         increment(pw)
@@ -96,8 +96,8 @@ function [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginDif,endDif,di
     end
 
     % Remove zeros at the beginning of meanOriginal that are added
-    % because the j loop variable starts at beginDif
-    meanOriginal = meanOriginal(beginDif:endDif);
+    % because the j loop variable starts at beginSP
+    meanOriginal = meanOriginal(beginSP:endSP);
 
     % Obtain a logical array indicating the images whose lighting is
     % significantly higher or lower than the median brightness of all
@@ -105,7 +105,7 @@ function [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginDif,endDif,di
     [~,RM_Nr]=rmoutliers(meanOriginal);
 
     % Obtain indices of outliers 
-    idx = beginDif:endDif;               
+    idx = beginSP:endSP;               
     idx_outliers = idx(RM_Nr);
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -113,17 +113,17 @@ function [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginDif,endDif,di
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
     % Read first image from stable flight period
-    aTemp=imread([dirRaw D_Im(beginDif).name]);
+    aTemp=imread([dirRaw D_Im(beginSP).name]);
 
     % Initialize zeros arrays for mean image and counter
     meanIM2=zeros(size(aTemp));
     counter=zeros(size(aTemp));
 
     % Generate another waitbar
-    pw = PoolWaitbar(endDif-beginDif, 'Computing the mean brightness of each pixel over the stable track period.');
+    pw = PoolWaitbar(endSP-beginSP, 'Computing the mean brightness of each pixel over the stable track period.');
     
     % Loop through images
-    parfor j=beginDif:endDif
+    parfor j=beginSP:endSP
 
         % Check if jth image is identified as a brightness outlier
         if ~ismember(j,idx_outliers)
@@ -172,10 +172,10 @@ function [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginDif,endDif,di
     counter=zeros(size(aTemp));
     
     % Generate another waitbar
-    pw = PoolWaitbar(endDif-beginDif, 'Computing the standard deviation of brightness for each pixel over the stable track period.');
+    pw = PoolWaitbar(endSP-beginSP, 'Computing the standard deviation of brightness for each pixel over the stable track period.');
     
     % Loop through images
-    parfor j=beginDif:endDif
+    parfor j=beginSP:endSP
 
         % Check if jth image is identified as a brightness outlier
         if ~ismember(j,idx_outliers)                                       

@@ -28,10 +28,10 @@ exp = 'SMODE IOP1';
 StartDate = '20221025';                                                    
 
 % Directories
-dirRaw = 'W:\\SMODE_2022\RAW\VIDEO\Frames\20221025_1\Images\';         
-dirProc = 'W:\\SMODE_2022\RAW\VIDEO\Frames\20221025_1\';                  
-dirV = 'W:\\SMODE_2022\RAW\VIDEO\Frames\20221025_1\QC_Plots\';      
-dirOut = 'W:\\SMODE_2022\PROCESSED\VIDEO\20221025_1\';
+dirRaw = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221025_1\Images\';         
+dirProc = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221025_1\';                  
+dirV = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221025_1\QC_Plots\';      
+dirOut = 'D:\SMODE_2022\PROCESSED\VIDEO\20221025_1\'; 
 
 % Flight stability criteria parameters
 maxPer = [25 25];                                                           
@@ -212,7 +212,7 @@ if option_run_bat == 1
     %--- Build batch file for georeferencing images ---%
 
     % Loop through tracks
-    for i=5 %1:length(tracks)
+    for i=8 %1:length(tracks)
     
         % Check if track is stable
         if trackTag(i).stable==1
@@ -236,7 +236,7 @@ if option_run_bat == 1
     %--- Build batch file for georeferencing images for identifying high glint regions ---%
     
     % Loop through tracks 
-    for i=5 %1:length(tracks)
+    for i=8 %1:length(tracks)
     
         % Check if track is stable
         if trackTag(i).stable==1
@@ -260,8 +260,8 @@ if option_run_bat == 1
     %--- Execute batch files ---%
     
     % Loop through tracks 
-    for i=1:length(tracks)
-        
+    for i=8 %1:length(tracks)
+            
         % Check if track is stable 
         if trackTag(i).stable==1
             
@@ -275,8 +275,8 @@ if option_run_bat == 1
     end
     
     % Loop through tracks
-    for i=1:length(tracks)
-        
+    for i=8 %1:length(tracks)
+            
         % Check if track is stable 
         if trackTag(i).stable==1
             

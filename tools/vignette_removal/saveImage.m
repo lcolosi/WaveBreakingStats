@@ -85,7 +85,7 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirout,sigma_ff,n_sigma
 
         % Set the number of CPU cores (i.e., the brains of the CPU that recieve
         % and execute operations for your computer) 
-        numCores= 10; %feature('numcores');
+        numCores=10; %feature('numcores');
     
         % Run code on parallel pools for increases efficiency
         poolobj = parpool(numCores);
@@ -102,7 +102,7 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirout,sigma_ff,n_sigma
     f = waitbar(0,'Please wait...','Position', [pos(1) pos(2)+2*pos(4) pos(3) pos(4)]);
 
     % Loop through tracks 
-    for i=5 %1:length(tracks)
+    for i=8 %1:length(tracks)
 
         % Update waitbar
         waitbar(i/length(tracks),f,...
@@ -113,8 +113,8 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirout,sigma_ff,n_sigma
         if (trackTag(i).stable==1) && (~isempty(tracks(i).Indices))
 
             % Set beginning and end indices for stable flight period 
-            beginDif=tracks_Im(i).Indices(1)+trackTag(i).range(1)-tracks(i).Indices(1);
-            endDif=tracks_Im(i).Indices(2)+trackTag(i).range(2)-tracks(i).Indices(2);
+            beginSP = trackTag(i).range(1);
+            endSP = trackTag(i).range(2);
 
             % Set the mean and standard deviation pixel images to avoid 
             % high data communication overhead in parfor loop 
@@ -138,10 +138,10 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirout,sigma_ff,n_sigma
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
             % Generate waitbar
-            pw = PoolWaitbar(endDif-beginDif, 'Removing vignetting and equalizing image.');
+            pw = PoolWaitbar(endSP-beginSP, 'Removing vignetting and equalizing image.');
 
             % Loop through images
-            parfor j=beginDif:endDif
+            parfor j=beginSP:endSP
                 
                 % Update waitbar
                 increment(pw)

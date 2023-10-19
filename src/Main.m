@@ -212,7 +212,7 @@ if option_run_bat == 1
     %--- Build batch file for georeferencing images ---%
 
     % Loop through tracks
-    for i=5 %1:length(tracks)
+    for i=8 %1:length(tracks)
     
         % Check if track is stable
         if trackTag(i).stable==1
@@ -236,7 +236,7 @@ if option_run_bat == 1
     %--- Build batch file for georeferencing images for identifying high glint regions ---%
     
     % Loop through tracks 
-    for i=5 %1:length(tracks)
+    for i=8 %1:length(tracks)
     
         % Check if track is stable
         if trackTag(i).stable==1
@@ -260,7 +260,7 @@ if option_run_bat == 1
     %--- Execute batch files ---%
     
     % Loop through tracks 
-    for i=5 %1:length(tracks)
+    for i=8 %1:length(tracks)
             
         % Check if track is stable 
         if trackTag(i).stable==1
@@ -275,7 +275,7 @@ if option_run_bat == 1
     end
     
     % Loop through tracks
-    for i=5 %1:length(tracks)
+    for i=8 %1:length(tracks)
             
         % Check if track is stable 
         if trackTag(i).stable==1

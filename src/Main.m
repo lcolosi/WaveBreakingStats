@@ -22,16 +22,24 @@ option_run_bat       = 1;
 option_globalOrlocal = 1;                                                 
 
 % Experiment title
-exp = 'SMODE IOP1';
+exp = 'S-MODE IOP1';
 
 % Start date of flight in UTC time
-StartDate = '20221025';                                                    
+StartDate = '20221016';                                                    
 
 % Directories
-dirRaw = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221025_1\Images\';         
-dirProc = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221025_1\';                  
-dirV = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221025_1\QC_Plots\';      
-dirOut = 'D:\SMODE_2022\PROCESSED\VIDEO\20221025_1\'; 
+% dirRaw = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221025_1\Images\';         
+% dirProc = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221025_1\';                  
+% dirV = 'D:\SMODE_2022\RAW\VIDEO\Frames\20221025_1\QC_Plots\';      
+% dirOut = 'D:\SMODE_2022\PROCESSED\VIDEO\20221025_1\'; 
+
+dirRaw = 'W:\SMODE_2022\RAW\VIDEO\20221016\Images\';         
+dirProc = 'W:\SMODE_2022\RAW\VIDEO\20221016\';    
+dirV = 'W:\SMODE_2022\RAW\VIDEO\20221016\QC_Plots\';      
+dirOut = 'W:\SMODE_2022\PROCESSED\VIDEO\20221016\'; 
+
+% Parallel computing
+percent_core = 80;
 
 % Flight stability criteria parameters
 maxPer = [25 25];                                                           
@@ -157,10 +165,10 @@ if option_image_proc == 1
     if ~exist(dirMGlint, 'dir'), mkdir(dirMGlint); end
 
     % Compute the mean brightness and standard deviation of each track
-    [meanIm,stdIm,RM_Nr,meanOriginal]=getImMeanStd(dirRaw,D_Im,tracks_Im,trackTag,tracks,winSize,sigma_ff_m,B_threshold,n_sigma);
+    [meanIm,stdIm,RM_Nr,outliers,meanOriginal]=getImMeanStd(dirRaw,D_Im,tracks_Im,trackTag,winSize,sigma_ff_m,B_threshold,n_sigma);
     
     % Save output from getImMeanStd 
-    save([dirProc '\Images\Intermediate_Products\mean_Images_Per_Track.mat'],'meanIm','stdIm','RM_Nr','meanOriginal');
+    save([dirProc '\Images\Intermediate_Products\mean_Images_Per_Track.mat'],'meanIm','stdIm','RM_Nr','outliers','meanOriginal');
     
     % Remove vignetting and equalize raw nongeoreferenced image; save 
     % intermediate products to dirVR
@@ -178,8 +186,8 @@ if option_image_proc == 1
     save([dirProc '\Images\Intermediate_Products\glint_threshold_Per_Track.mat'],'Glint');
 
 elseif isempty(whos('meanIm')) || isempty(whos('stdIm')) ||...
-       isempty(whos('RM_Nr')) || isempty(whos('meanOriginal')) ||...
-       isempty(whos('Glint'))
+       isempty(whos('RM_Nr')) || isempty(whos('outliers')) ||...
+       isempty(whos('meanOriginal')) || isempty(whos('Glint'))
     
     % Load mean brightness and standard deviation imagesand glint threshold
     load([dirProc '\Images\Intermediate_Products\mean_Images_Per_Track.mat'])
@@ -196,7 +204,7 @@ if option_plot == 1
     if ~exist(dirVn, 'dir'), mkdir(dirVn); end
 
     % Generate plots 
-    plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,Glint);
+    plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,Glint,meanOriginal,outliers);
 end
 
 display_text('Done!','body')
@@ -212,7 +220,7 @@ if option_run_bat == 1
     %--- Build batch file for georeferencing images ---%
 
     % Loop through tracks
-    for i=8 %1:length(tracks)
+    for i=1 %1:length(tracks)
     
         % Check if track is stable
         if trackTag(i).stable==1
@@ -236,7 +244,7 @@ if option_run_bat == 1
     %--- Build batch file for georeferencing images for identifying high glint regions ---%
     
     % Loop through tracks 
-    for i=8 %1:length(tracks)
+    for i=1 %1:length(tracks)
     
         % Check if track is stable
         if trackTag(i).stable==1
@@ -260,7 +268,7 @@ if option_run_bat == 1
     %--- Execute batch files ---%
     
     % Loop through tracks 
-    for i=8 %1:length(tracks)
+    for i=1 %1:length(tracks)
             
         % Check if track is stable 
         if trackTag(i).stable==1
@@ -275,7 +283,7 @@ if option_run_bat == 1
     end
     
     % Loop through tracks
-    for i=8 %1:length(tracks)
+    for i=1 %1:length(tracks)
             
         % Check if track is stable 
         if trackTag(i).stable==1

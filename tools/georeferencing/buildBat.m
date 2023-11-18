@@ -47,7 +47,7 @@ function buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,trackNr,res,option_plot,
     %           how to export the images (i.e., where to export them, what 
     %           resoultion to export them at, what surface the image is
     %           projected onto (here it is a flat surface defined by the
-    %           mea sea level).
+    %           mean sea level).
     %
     %       (3) Batch file : This file executes the trimble project in a
     %           low level mode (specified by the flag -batch). 
@@ -335,10 +335,14 @@ function buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,trackNr,res,option_plot,
 
         % Calculate exterior orientation from boresight angles and EO file rounded values
         ei = round(EO.omega(mm),5); ej = round(EO.phi(mm),5); ek = round(EO.kappa(mm),5);   
-        eo_matrix = [cosd(ej)*cosd(ek),                            -cosd(ej)*sind(ek),                           sind(ej);...
-                     cosd(ei)*sind(ek)+sind(ei)*sind(ej)*cosd(ek),  cosd(ei)*cosd(ek)-sind(ei)*sin(ej)*sin(ek), -sind(ei)*cosd(ej);...
-                     sind(ei)*sind(ek)-sind(ej)*cosd(ei)*cosd(ek),  sind(ei)*cosd(ek)+cosd(ei)*sin(ej)*sin(ek),  cosd(ei)*cosd(ej)];   
+        eo_matrix = [cosd(ej)*cosd(ek),                            -cosd(ej)*sind(ek),                             sind(ej);...
+                     cosd(ei)*sind(ek)+sind(ei)*sind(ej)*cosd(ek),  cosd(ei)*cosd(ek)-sind(ei)*sind(ej)*sind(ek), -sind(ei)*cosd(ej);...
+                     sind(ei)*sind(ek)-sind(ej)*cosd(ei)*cosd(ek),  sind(ei)*cosd(ek)+cosd(ei)*sind(ej)*sind(ek),  cosd(ei)*cosd(ej)];   
         eobo_matrix = (eo_matrix*bo_matrix)';  
+
+        eo_matrix = [cos(round(EO.phi(mm),5)*pi/180)*cos(round(EO.kappa(mm),5)*pi/180),  -cos(round(EO.phi(mm),5)*pi/180)*sin(round(EO.kappa(mm),5)*pi/180),  sin(round(EO.phi(mm),5)*pi/180);...
+                     cos(round(EO.omega(mm),5)*pi/180)*sin(round(EO.kappa(mm),5)*pi/180)+sin(round(EO.omega(mm),5)*pi/180)*sin(round(EO.phi(mm),5)*pi/180)*cos(round(EO.kappa(mm),5)*pi/180),  cos(round(EO.omega(mm),5)*pi/180)*cos(round(EO.kappa(mm),5)*pi/180)-sin(round(EO.omega(mm),5)*pi/180)*sin(round(EO.phi(mm),5)*pi/180)*sin(round(EO.kappa(mm),5)*pi/180),  -sin(round(EO.omega(mm),5)*pi/180)*cos(round(EO.phi(mm),5)*pi/180);...
+                     sin(round(EO.omega(mm),5)*pi/180)*sin(round(EO.kappa(mm),5)*pi/180)-sin(round(EO.phi(mm),5)*pi/180)*cos(round(EO.omega(mm),5)*pi/180)*cos(round(EO.kappa(mm),5)*pi/180),  sin(round(EO.omega(mm),5)*pi/180)*cos(round(EO.kappa(mm),5)*pi/180)+cos(round(EO.omega(mm),5)*pi/180)*sin(round(EO.phi(mm),5)*pi/180)*sin(round(EO.kappa(mm),5)*pi/180),  cos(round(EO.omega(mm),5)*pi/180)*cos(round(EO.phi(mm),5)*pi/180)];  
 
         % Write to cell array
         photo{mm,10,:} = sprintf('      %15.12f      %15.12f      %15.12f',eobo_matrix(1,1),eobo_matrix(1,2),eobo_matrix(1,3));
@@ -380,7 +384,7 @@ function buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,trackNr,res,option_plot,
     f = waitbar(0,'Please wait...');
 
     % Loop though photos
-    for tt=1:length(photo)
+    for tt=1:size(photo,1)
     
         % Update waitbar
         if rem(tt,round(length(photo)/100,-1))==0
@@ -408,7 +412,7 @@ function buildBat(dirin_img,dirin_prj,proj_lat,proj_lon,trackNr,res,option_plot,
     f = waitbar(0,'Please wait...');
 
     % Loop though photos
-    for tt=1:length(photo)
+    for tt=1:size(photo,1)
 
         % Update waitbar
         if rem(tt,round(length(photo)/100,-1))==0

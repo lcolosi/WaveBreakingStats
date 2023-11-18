@@ -1,4 +1,4 @@
-function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,Glint)
+function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,Glint,meanOriginal,outliers)
 
     %%%%
     % plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,stdIm,Glint)
@@ -51,6 +51,14 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
     %               (temporal std). Standard deviation of brightness
     %               is smoothed using a 2D moving average.
     %   Glint    : Glint threshold brightness. 
+    %   meanOriginal : Mean brightness over all pixels for each image 
+    %                  (spatial average). Here, the mean of the all pixels
+    %                  below the brightness threshold set by B_threshold of
+    %                  each image is computed. This is computed to check
+    %                  for significant variations in image lighting. 
+    %   outliers : Statistics and theshold criteria for determining images
+    %              with significant background brightness variations from 
+    %              the temporal median bmean image brightness. 
     %
     %   Returns
     %   -------
@@ -62,14 +70,10 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
 
     % Plotting parameters
     fontsize = 14; 
-    font = 'times';
-    
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %% Plot mean and std of brightness for each pixel over stable track period
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+    font = 'times';  
 
     % Loop through tracks 
-    for i=8 %1:length(tracks)
+    for i=1 %1:length(tracks)
         
         % Check if track is stable and if full track has start and end time
         % indices
@@ -79,6 +83,11 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
             trackDir=[dirVn 'Track_' num2str(i) '\'];
             if ~exist(trackDir, 'dir'), mkdir(trackDir); end
             
+
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %% Plot the mean and std of brightness w.r.t. time for each pixel 
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+
             % Generate figure
             figure('Name', ['Mean and standard Deviation Pixel Brightness  - Flight Track' num2str(i)]);
             set(gcf,'color',[1,1,1])
@@ -122,9 +131,35 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
                 yy=colorbar();
                 title(yy,'Brightness','fontname',font,'FontSize',fontsize)
             
-
             % Save figure
             print(gcf,'-dpng', [trackDir 'Brightness_statistics-track' num2str(i) '.png'], '-r200');
+    
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            %% Plot the mean image brightness time series with outlier stats 
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+
+            % Generate figure
+            figure('Name', ['Mean Brightness per image  - Flight Track' num2str(i)]);
+            set(gcf,'color',[1,1,1])
+            set(gcf,'Position',[100,100,1200,500])
+                
+            % Plot mean image brightness (spatial average)
+            plot(meanOriginal(i).nr, 'o-k', 'LineWidth',1);
+
+            % Plot outlier statistics
+            hold on 
+                yline([outliers(i).nr.L outliers(i).nr.U outliers(i).nr.C],":",["Lower Threshold","Upper Threshold","Median Brightness"])
+            hold off
+
+            % set figure attributes
+            set(gca,'fontname',font,'FontSize',fontsize,'tickdir','both')
+            xlabel('Number of frames','fontname',font,'FontSize',fontsize)
+            ylabel('$\langle I(x,y,t) \rangle_{x,y}$','fontname',font,'FontSize',fontsize)
+            box on
+            %daspect([1 1 1])
+        
+            % Save figure
+            print(gcf,'-dpng', [trackDir 'Mean_Image_Brightness_statistics-track' num2str(i) '.png'], '-r200');
     
             % Set beginning and end indices for stable flight period  
             beginSP = trackTag(i).range(1);
@@ -212,7 +247,7 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
                     daspect([1 1 1])
 
                     % Set colorbar attributes
-                    colormap(flipud(cbrewer2('RdYlBu',length(tracks))));
+                    colormap(bone);
                     yy=colorbar();
                     caxis([500 10000])
                     title(yy,'Brightness','fontname',font,'FontSize',fontsize)
@@ -232,7 +267,7 @@ function plotProcessedImages(dirVn,dirRaw,D_Im,tracks_Im,trackTag,tracks,meanIm,
                     daspect([1 1 1])
 
                     % Set colorbar attributes
-                    colormap(flipud(cbrewer2('RdYlBu',length(tracks))));
+                    colormap(bone);
                     yy=colorbar();
                     title(yy,'Brightness','fontname',font,'FontSize',fontsize)
                     caxis([500 10000])

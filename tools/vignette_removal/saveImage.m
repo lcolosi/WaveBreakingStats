@@ -102,7 +102,7 @@ function saveImage(dirRaw,D_Im,tracks_Im,trackTag,tracks,dirout,sigma_ff,n_sigma
     f = waitbar(0,'Please wait...','Position', [pos(1) pos(2)+2*pos(4) pos(3) pos(4)]);
 
     % Loop through tracks 
-    for i=8 %1:length(tracks)
+    for i=1 %1:length(tracks)
 
         % Update waitbar
         waitbar(i/length(tracks),f,...

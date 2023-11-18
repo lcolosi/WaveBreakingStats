@@ -1,4 +1,4 @@
-function [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginSP,endSP,dirRaw,D_Im,sigma_ff,B_threshold,n_sigma)
+function [meanOriginal,RM_Nr,outliers,meanIm,stdIm] = determineMeanStd(beginSP,endSP,dirRaw,D_Im,sigma_ff,B_threshold,n_sigma)
 
     %%%%
     % [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginSP,endSP,dirRaw,D_Im,arrayHist,sigma_ff,B_threshold,n_sigma)
@@ -46,8 +46,23 @@ function [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginSP,endSP,dirR
     %                  brightness of all images (i.e. the outliers). 
     %                  Significance deviation from the median is defined as 
     %                  more than three scaled median absolute deviations 
-    %                  from the median  This is the quantity that identifies 
+    %                  from the median. This is the quantity that identifies 
     %                  significant variations in an image's lighting.
+    %   outliers     : A structure containing three fields:
+    %                       (1) L : The lower threshold value for outliers. 
+    %                               This value is defined as
+    %                               three scaled median absolute 
+    %                               deviations below the median.  
+    %                       (2) U : The upper threshold value for outliers. 
+    %                               This value is defined as
+    %                               three scaled median absolute 
+    %                               deviations above the median.
+    %                       (3) C : The median of mean image brightness
+    %                               time series defined here as the center
+    %                               value of the outlier analysis.
+    %                       (4) N : The total number of images identified
+    %                               as having significant deviation in
+    %                               mean image brightness.
     %   meanOriginal : Mean brightness over all pixels for each image 
     %                  (spatial average). Here, the mean of the all pixels
     %                  below the brightness threshold set by B_threshold of
@@ -102,7 +117,10 @@ function [meanOriginal,RM_Nr,meanIm,stdIm] = determineMeanStd(beginSP,endSP,dirR
     % Obtain a logical array indicating the images whose lighting is
     % significantly higher or lower than the median brightness of all
     % images (i.e. the outliers). 
-    [~,RM_Nr]=rmoutliers(meanOriginal);
+    [~,RM_Nr,~,outliers.L,outliers.U,outliers.C]=rmoutliers(meanOriginal);
+
+    % Compute the total number of outliers
+    outliers.N = sum(RM_Nr);
 
     % Obtain indices of outliers 
     idx = beginSP:endSP;               

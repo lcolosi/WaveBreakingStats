@@ -1,7 +1,7 @@
-function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,trackTag,tracks,winSize,sigma_ff,B_threshold,n_sigma)
+function [meanIm,stdIm,RM_Nr,outliers,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,trackTag,winSize,sigma_ff,B_threshold,n_sigma)
 
     %%%%
-    % [meanIm,stdIm,RM_Nr,meanOriginal]=getImMeanStd(dirRaw,D_Im,tracks_Im,trackTag,tracks,winSize,sigma_ff,B_threshold,n_sigma)
+    % [meanIm,stdIm,RM_Nr,outliers,meanOriginal]=getImMeanStd(dirRaw,D_Im,tracks_Im,trackTag,winSize,sigma_ff,B_threshold,n_sigma)
     %
     % Function for computing the mean and standard deviation of each pixel
     % for each track during the stable periods. Additionally outliers are 
@@ -37,9 +37,6 @@ function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,
     %                           computed over the interval: 
     %                                   tracks(i).Indices(1)+rmN(1) to 
     %                                   tracks(i).Indices(2)-rmN(2) 
-    %   tracks    : Structure containing the start and end time indices of
-    %               each full flight track (located in the indices field).
-    %               Indices derived from EO file.
     %   winSize   : Window or Kernel size for 2D move average. Window is
     %               square so winSize is a scale quantity representing the
     %               side length of the square window.  
@@ -73,6 +70,21 @@ function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,
     %                  more than three scaled median absolute deviations 
     %                  from the median  This is the quantity that identifies 
     %                  significant variations in an image's lighting.
+    %   outliers     : A structure containing three fields:
+    %                       (1) L : The lower threshold value for outliers. 
+    %                               This value is defined as
+    %                               three scaled median absolute 
+    %                               deviations below the median.  
+    %                       (2) U : The upper threshold value for outliers. 
+    %                               This value is defined as
+    %                               three scaled median absolute 
+    %                               deviations above the median.
+    %                       (3) C : The median of mean image brightness
+    %                               time series defined here as the center
+    %                               value of the outlier analysis.
+    %                       (4) N : The total number of images identified
+    %                               as having significant deviation in
+    %                               mean image brightness.
     %   meanOriginal : Mean brightness over all pixels for each image 
     %                  (spatial average). Here, the mean of the all pixels
     %                  below the brightness threshold set by B_threshold of
@@ -119,7 +131,7 @@ function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,
     f = waitbar(0,'Please wait...','Position', [pos(1) pos(2)+2*pos(4) pos(3) pos(4)]);
 
     % Loop through tracks 
-    for i=8 %1:length(tracks_Im)
+    for i=1 %1:length(tracks_Im)
 
         % Update waitbar
         waitbar(i/length(tracks_Im),f,...
@@ -133,7 +145,7 @@ function [meanIm,stdIm,RM_Nr,meanOriginal] = getImMeanStd(dirRaw,D_Im,tracks_Im,
             endSP = trackTag(i).range(2);
 
             % Compute the mean and standard deviation of the image plus identify outliers       
-            [meanOriginal(i).nr,RM_Nr(i).nr,meanIm(i).im,stdIm(i).im]=determineMeanStd(beginSP,endSP,dirRaw,D_Im,sigma_ff,B_threshold,n_sigma); %#ok
+            [meanOriginal(i).nr,RM_Nr(i).nr,outliers(i).nr, meanIm(i).im,stdIm(i).im]=determineMeanStd(beginSP,endSP,dirRaw,D_Im,sigma_ff,B_threshold,n_sigma); %#ok
             
             % Compute the 2D moving average of the mean and standard deviation of brightness 
             meanIm(i).im=mean2D(meanIm(i).im,winSize);                      %#ok
